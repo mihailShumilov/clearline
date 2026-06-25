@@ -4,7 +4,7 @@
 
 ## Repo / infra
 
-- GitHub: https://github.com/mihailShumilov/clearline (private; flip public for §13).
+- GitHub: https://github.com/mihailShumilov/clearline (**public**).
 - Devnet agent wallet (dedicated, gitignored): `HCbeaJ54rRSEwey2QEd49tgFyrfFYAfpK3kzZ86NKd8P` (funded 5 SOL).
 - `pnpm check` green on `main`: **203 passed / 2 skipped**, `packages/core` **100%** coverage.
 - 5 PRs merged (all reviewer-gated). Upstream kit issues filed: #8, #9.
@@ -29,5 +29,5 @@
 
 - **Phase 6** — Hono API on Cloudflare Workers + D1 (positions/edges/settlements/RPC-health/agent-status + replay control); local `wrangler dev`.
 - **Phase 7** — Proof-of-Edge dashboard (Vite + React): edges/positions, settlement cards (Explorer + verdict), P&L, live event stream, **RPC Health** panel.
-- **Phase 9** — flip repo public, record the demo video (§13 scenario), final docs polish.
+- **Phase 9** — repo public ✅; record the demo video (§13 scenario) — owner action.
 - Small follow-ups: a CLI entry to run `/demo-replay`; `verifiedOnChain` should be false for predicates with no recorded on-chain cross-check; live-path normalization of the real fixture's `number[]` proof encoding vs the txline `z.string()` schema.

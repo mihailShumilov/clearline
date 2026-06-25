@@ -20,13 +20,12 @@ _The TxODDS Hackathon Challenge 2026 — World Cup. Network: devnet._
 - [x] **Deterministic `/demo-replay`** of a real World Cup match — `runRealDemoReplay`,
       idempotent, settles on the recorded on-chain verdict.
 - [x] Quality gates green (`pnpm check`); `packages/core` **100%** coverage; 203 tests.
-- [~] Public repo + README + complete `docs/` — README + 8 docs done; repo is
-  **private** → flip public for submission.
+- [x] **Public repo** + README + complete `docs/` — repo is public; README + 8 docs done.
 - [ ] **Recorded demo video** following the script below — owner action.
 
 ## Links
 
-- Repo: https://github.com/mihailShumilov/clearline (private — flip public)
+- Repo: https://github.com/mihailShumilov/clearline (public)
 - Devnet program: `6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J`
 - Subscribe tx: https://explorer.solana.com/tx/rGE1t1gAtNJAFCxLsLkKEek7rusKfrsrnqTQcMbCukNZhfdg9Tng3wfuBb5SjrUV3DXBvRqSa5efyPL4ukFYA8M?cluster=devnet
 - daily_scores_roots PDA: `CdUmkUdc4XBKeeq7Kq6JxQvnVMNuDA21mp98x4Rs3jHQ`
@@ -56,6 +55,5 @@ pnpm --filter @clearline/dashboard dev    # http://localhost:5173
 
 ## Remaining (owner)
 
-Flip the repo public (`gh repo edit mihailShumilov/clearline --visibility public`), then
-record the video. Optional: deploy API (Workers+D1) + dashboard (Pages) — needs
+Record the video (script above). Optional: deploy API (Workers+D1) + dashboard (Pages) — needs
 `wrangler login`.

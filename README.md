@@ -73,5 +73,5 @@ dedicated devnet agent wallet and `TXLINE_*` tokens live there (gitignored).
 ## Status
 
 Phases 0–8 complete (agent, resilience, core, **live on-chain trustless settlement**,
-API, dashboard, deterministic replay). Remaining: flip the repo public + record the demo
+API, dashboard, deterministic replay); repo is public. Remaining (owner): record the demo
 video (§13). 203 tests, `packages/core` 100% covered, `pnpm check` green.
