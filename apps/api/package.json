@@ -1,0 +1,26 @@
+{
+  "name": "@clearline/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "dev": "wrangler dev",
+    "db:generate": "drizzle-kit generate"
+  },
+  "dependencies": {
+    "@clearline/agent": "workspace:*",
+    "@clearline/chain": "workspace:*",
+    "@clearline/core": "workspace:*",
+    "@clearline/txline": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.27",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260625.1",
+    "drizzle-kit": "^0.31.10",
+    "wrangler": "^4.104.0"
+  }
+}
