@@ -2,7 +2,12 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    // Web/Workers runtime globals (fetch, Headers, Response, ReadableStream,
+    // TextDecoder, URL, AbortSignal) — provided by @types/node 26 (also present
+    // in Cloudflare Workers / browsers). DOM lib supplies the same ambient types.
+    "lib": ["ES2023", "DOM"],
+    "types": ["node"]
   },
   "include": ["src"]
 }
