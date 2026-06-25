@@ -1,0 +1,8 @@
+**/dist/**
+**/coverage/**
+**/node_modules/**
+**/.wrangler/**
+pnpm-lock.yaml
+**/*.generated.ts
+packages/*/src/generated/**
+packages/contracts/target/**

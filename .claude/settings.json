@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(pnpm *)",
+      "Bash(node *)",
+      "Bash(tsx *)",
+      "Bash(npx tsx *)",
+      "Bash(cargo *)",
+      "Bash(rustc *)",
+      "Bash(anchor *)",
+      "Bash(avm *)",
+      "Bash(solana *)",
+      "Bash(solana-keygen *)",
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(npm view *)",
+      "Bash(npx wrangler dev *)",
+      "Bash(npx wrangler whoami)",
+      "Bash(npx wrangler d1 *)",
+      "Bash(npx wrangler pages *)",
+      "Bash(curl -sSL --max-time * https://txline*)",
+      "Bash(curl -sSL --max-time * https://txline-docs.txodds.com/*)"
+    ],
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.dev.vars)",
+      "Read(**/.secrets/**)",
+      "Read(**/id.json)",
+      "Read(**/*keypair*.json)",
+      "Bash(cat .env*)",
+      "Bash(cat .dev.vars*)",
+      "Bash(cat .secrets/*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f *)",
+      "Bash(solana config set --url mainnet*)",
+      "Bash(solana config set --url https://api.mainnet*)",
+      "Bash(solana airdrop * --url mainnet*)",
+      "Bash(wrangler secret put*)",
+      "Bash(npx wrangler secret put*)",
+      "Bash(sudo *)",
+      "Bash(rm -rf /*)"
+    ]
+  }
+}
