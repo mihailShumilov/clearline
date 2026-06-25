@@ -96,7 +96,11 @@ before any broadcast (`primary.stats.sends === 0`).
 
 ## Findings → issues / PRs (friction worth an upstream issue)
 
-1. **`RpcTransport` is not re-exported from a stable public path for consumers.**
+Filed upstream on `mihailShumilov/solana-resilience-kit`:
+[#8](https://github.com/mihailShumilov/solana-resilience-kit/issues/8) (finding 1),
+[#9](https://github.com/mihailShumilov/solana-resilience-kit/issues/9) (finding 2).
+
+1. **`RpcTransport` is not re-exported from a stable public path for consumers.** ([#8](https://github.com/mihailShumilov/solana-resilience-kit/issues/8))
    The kit's `pool.d.ts` imports `RpcTransport` from `@solana/rpc-spec`, but that
    package is **not a direct dependency of a kit consumer**, so
    `import type { RpcTransport } from "@solana/rpc-spec"` fails to resolve under
@@ -107,7 +111,7 @@ before any broadcast (`primary.stats.sends === 0`).
 
 2. **Freshness-aware routing means a consistently-bad endpoint never reaches the
    serve path, so per-request metrics (`rpc.rate_limited`, `rpc.request.failures`)
-   are NOT recorded for it.** With `freshnessAware: true` (the default), the
+   are NOT recorded for it.** ([#9](https://github.com/mihailShumilov/solana-resilience-kit/issues/9)) With `freshnessAware: true` (the default), the
    pre-request `getSlot` probe detects the bad endpoint and `rankByFreshness`
    drops it, so the real request goes straight to the healthy node. The bad
    endpoint's failures are then only visible via `health()` (probe failures feed
