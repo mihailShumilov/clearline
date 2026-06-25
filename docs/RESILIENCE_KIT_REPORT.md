@@ -72,13 +72,17 @@ Measured by `runLandingBench` (`packages/chain/src/bench/landing.ts`, exercised 
 cluster. "Landing" = a `getSlot` read returns without throwing. The **naive**
 client is pinned to a single faulty primary (the status quo most dApps ship); the
 **resilient** client is `createChainPool` over the same faulty primary + a clean
-backup. Seeds fixed, so the numbers reproduce exactly.
+backup. All rows use the committed default **`seed: 1`**, so they reproduce
+exactly (the 100% row is also asserted in `bench/landing.test.ts`).
 
 | Scenario (injected primary failure) | Attempts | Naive client        | With kit (pool)      |
 | ----------------------------------- | -------- | ------------------- | -------------------- |
 | 100% primary failure (drop / 503)   | 50       | **0.0%** (0/50)     | **100.0%** (50/50)   |
-| 50% primary failure                 | 200      | **52.0%** (104/200) | **100.0%** (200/200) |
-| 25% primary failure                 | 200      | **69.5%** (139/200) | **100.0%** (200/200) |
+| 50% primary failure                 | 200      | **47.5%** (95/200)  | **100.0%** (200/200) |
+| 25% primary failure                 | 200      | **71.0%** (142/200) | **100.0%** (200/200) |
+
+Reproduce: `runLandingBench({ primaryErrorRate, attempts, seed: 1 })`
+(`packages/chain/src/bench/landing.ts`).
 
 Takeaway: under any primary degradation the pool's failover lifts the landing
 rate to 100% by routing to the healthy backup, while the naive single-endpoint
