@@ -1,0 +1,14 @@
+name = "clearline-api"
+main = "src/index.ts"
+compatibility_date = "2025-06-01"
+# The bundled internal packages pull in node-shaped deps (Solana kit / drizzle);
+# nodejs_compat lets esbuild resolve them under the Workers runtime.
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "clearline"
+# Placeholder — replace with the real id from `wrangler d1 create clearline`
+# (deploy needs `wrangler login`; local dev does not).
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
