@@ -1,0 +1,116 @@
+{
+  "fixtureId": 900001,
+  "label": "World Cup (SYNTHETIC) — Group A: Participant1 2-1 Participant2",
+  "updates": [
+    {
+      "fixtureId": 900001,
+      "gameState": "PreMatch",
+      "startTime": 1735830000,
+      "fixtureGroupId": 5500,
+      "competitionId": 4200,
+      "countryId": 0,
+      "sportId": 1,
+      "participant1IsHome": true,
+      "participant2Id": 7102,
+      "participant1Id": 7101,
+      "action": "Kickoff",
+      "id": 1,
+      "ts": 1735830000000,
+      "connectionId": 1,
+      "seq": 1,
+      "scoreSoccer": {
+        "Participant1": { "Total": { "score": 0 } },
+        "Participant2": { "Total": { "score": 0 } }
+      },
+      "stats": { "1": 0, "2": 0 }
+    },
+    {
+      "fixtureId": 900001,
+      "gameState": "FirstHalf",
+      "startTime": 1735830000,
+      "fixtureGroupId": 5500,
+      "competitionId": 4200,
+      "countryId": 0,
+      "sportId": 1,
+      "participant1IsHome": true,
+      "participant2Id": 7102,
+      "participant1Id": 7101,
+      "action": "Goal",
+      "id": 2,
+      "ts": 1735831380000,
+      "connectionId": 1,
+      "seq": 2,
+      "scoreSoccer": {
+        "Participant1": { "Total": { "score": 1 } },
+        "Participant2": { "Total": { "score": 0 } }
+      },
+      "stats": { "1": 1, "2": 0 }
+    },
+    {
+      "fixtureId": 900001,
+      "gameState": "SecondHalf",
+      "startTime": 1735830000,
+      "fixtureGroupId": 5500,
+      "competitionId": 4200,
+      "countryId": 0,
+      "sportId": 1,
+      "participant1IsHome": true,
+      "participant2Id": 7102,
+      "participant1Id": 7101,
+      "action": "Goal",
+      "id": 3,
+      "ts": 1735834020000,
+      "connectionId": 1,
+      "seq": 3,
+      "scoreSoccer": {
+        "Participant1": { "Total": { "score": 1 } },
+        "Participant2": { "Total": { "score": 1 } }
+      },
+      "stats": { "1": 1, "2": 1 }
+    },
+    {
+      "fixtureId": 900001,
+      "gameState": "SecondHalf",
+      "startTime": 1735830000,
+      "fixtureGroupId": 5500,
+      "competitionId": 4200,
+      "countryId": 0,
+      "sportId": 1,
+      "participant1IsHome": true,
+      "participant2Id": 7102,
+      "participant1Id": 7101,
+      "action": "Goal",
+      "id": 4,
+      "ts": 1735835520000,
+      "connectionId": 1,
+      "seq": 4,
+      "scoreSoccer": {
+        "Participant1": { "Total": { "score": 2 } },
+        "Participant2": { "Total": { "score": 1 } }
+      },
+      "stats": { "1": 2, "2": 1 }
+    },
+    {
+      "fixtureId": 900001,
+      "gameState": "FullTime",
+      "startTime": 1735830000,
+      "fixtureGroupId": 5500,
+      "competitionId": 4200,
+      "countryId": 0,
+      "sportId": 1,
+      "participant1IsHome": true,
+      "participant2Id": 7102,
+      "participant1Id": 7101,
+      "action": "FullTime",
+      "id": 5,
+      "ts": 1735836900000,
+      "connectionId": 1,
+      "seq": 5,
+      "scoreSoccer": {
+        "Participant1": { "Total": { "score": 2 } },
+        "Participant2": { "Total": { "score": 1 } }
+      },
+      "stats": { "1": 2, "2": 1 }
+    }
+  ]
+}
