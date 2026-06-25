@@ -166,8 +166,8 @@ Authorization: Bearer <JWT>  ·  X-Api-Token: <API token>
   "statToProve": { "key":1, "value":1, "period":0 },
   "eventStatRoot": [163,74,158, …],          # 32-byte number[] (NOT base64 on devnet)
   "summary": { "fixtureId":17588395,
-               "updateStats": { "updateCount":60, "minTimestamp":1782355812812,
-                                "maxTimestamp":1782356098997 },
+               "updateStats": { "updateCount":2, "minTimestamp":1782356424595,
+                                "maxTimestamp":1782356615778 },
                "eventStatsSubTreeRoot": [249,141,171, …] },   # 32-byte number[]
   "statProof":    [ { "hash":[203,202,46,…], "isRightSibling":true }, … ],  # depth 6
   "subTreeProof": [ { … } ],                                                # depth 1 (terminal seq)
