@@ -2,7 +2,11 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    // Web/Workers + Node runtime globals (console, fetch, Response, etc.) — needed
+    // by the structured logger here and by the @clearline/txline client types.
+    "lib": ["ES2023", "DOM"],
+    "types": ["node"]
   },
   "include": ["src"]
 }
