@@ -32,11 +32,33 @@ export {
 // Strategy
 export { makeOverGoalsStrategy, type Strategy, type OverGoalsStrategyOptions } from "./strategy";
 
+// Real recorded fixture
+export {
+  loadRealFixture,
+  RealFixtureSchema,
+  RealFixtureError,
+  ChosenSchema,
+  OnChainEvidenceSchema,
+  RecordedVerdictsSchema,
+  RecordedVerdictSchema,
+  StatToProveSchema,
+  StatValidationSchema,
+  type RealFixture,
+  type Chosen,
+  type OnChainEvidence,
+  type RecordedVerdicts,
+  type RecordedVerdict,
+  type StatToProve,
+  type StatValidation,
+} from "./realFixture";
+
 // Settlement providers
 export {
   LocalSettlementProvider,
+  RecordedSettlementProvider,
   OnChainSettlementProvider,
   SettlementError,
+  type SettlementErrorCode,
   type SettlementProvider,
   type SettlementOutcome,
   type SettleArgs,
@@ -52,7 +74,20 @@ export {
 } from "./store";
 
 // Runner
-export { AgentRunner, type RunReplayArgs, type ReplayResult } from "./agent";
+export {
+  AgentRunner,
+  type RunReplayArgs,
+  type ReplayResult,
+  type ReplayOnChainProof,
+} from "./agent";
 
 // Demo
-export { runDemoReplay, loadDemoFixture, DEMO_SEED, DEMO_FIXTURE_ID } from "./demo";
+export {
+  runDemoReplay,
+  runRealDemoReplay,
+  loadDemoFixture,
+  loadRealDemoFixture,
+  DEMO_SEED,
+  DEMO_FIXTURE_ID,
+  REAL_FIXTURE_ID,
+} from "./demo";
