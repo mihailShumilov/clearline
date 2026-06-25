@@ -38,8 +38,13 @@ ClearLine and TxLINE IDLs; send every transaction through solana-resilience-kit'
 **Context:** internal `@clearline/*` packages are consumed by Workers (esbuild), Vite,
 tsx, and Vitest — never run as raw Node ESM from `dist/`.
 **Decision:** use `moduleResolution: "Bundler"` with extensionless TS imports; the
-bundler/test-runner resolves source. `tsc` build still emits `dist/` for typecheck/decl.
-**Status:** Accepted. Revisit if a package must be published or run as raw Node ESM.
+bundler/test-runner resolves source. Each internal package's `main`/`types`/`exports`
+point at **`./src/index.ts`** (not `dist/`), so cross-package consumers (agent → core/
+txline/chain) and Vitest/esbuild/wrangler resolve TS source directly — the emitted
+`dist/` (extensionless ESM) is NOT runnable under raw Node ESM and is used only as a
+compile/declaration sanity check by `pnpm -r build`.
+**Status:** Accepted. Revisit only if a package must be published or run as raw Node ESM
+(then switch to `NodeNext` + explicit `.js` import extensions, and export `dist/`).
 
 ## ADR-0005 — Deterministic historical replay for the demo
 
