@@ -101,6 +101,11 @@ stat_a:StatTerm, stat_b:Option<StatTerm>, op:Option<BinaryExpression>` → `bool
   example passing `validation.ts` is wrong for this devnet build.)
 - **Devnet feed encodes 32-byte roots/hashes as JSON `number[]` arrays**, not the base64
   strings the mainnet OpenAPI `format: binary` implied. Pass them straight through.
+  NOTE: the recorded fixture (`packages/agent/src/fixtures/wc-real-17588395.json`) therefore
+  stores `eventStatRoot`/proof `hash` as `number[]`, which diverges from
+  `txline/schemas.ts` `ScoresStatValidationSchema` (`z.string()`). The Phase-5 replay layer
+  must normalize (`number[]` → bytes) rather than `.parse()` the saved file with that schema
+  directly — or the txline schema should accept both encodings.
 - **`validate_stat` returns `bool` via Solana return-data**, decoded by Anchor `.view()`
   (read-only simulation, no fee, no signature). The saved mainnet IDL omits the `returns`
   field, which blocks `.view()`; the devnet-patched IDL adds `returns: "bool"`.
