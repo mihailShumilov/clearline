@@ -14,5 +14,12 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@clearline/core": "workspace:*",
+    "@opentelemetry/api": "^1.9.1",
+    "@solana/kit": "^6.10.0",
+    "solana-resilience-kit": "^1.2.0",
+    "zod": "^4.4.3"
   }
 }
