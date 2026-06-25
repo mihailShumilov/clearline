@@ -7,3 +7,5 @@ pnpm-lock.yaml
 packages/*/src/generated/**
 packages/contracts/target/**
 packages/contracts/idl/**
+packages/contracts/spike/**
+packages/contracts/package.json

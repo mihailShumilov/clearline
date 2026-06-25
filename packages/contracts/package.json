@@ -1,0 +1,16 @@
+{
+  "name": "@clearline/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "ClearLine on-chain artifacts (TxLINE IDL) + throwaway Phase-4 devnet spike. Outside the TS workspace gate (eslint/tsconfig/prettier ignore it).",
+  "scripts": {
+    "spike:validate": "tsx spike/validate_scores_onchain.ts"
+  },
+  "devDependencies": {
+    "@coral-xyz/anchor": "^0.32.1",
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.98.4",
+    "tsx": "^4.22.4",
+    "tweetnacl": "^1.0.3"
+  }
+}

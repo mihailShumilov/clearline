@@ -108,3 +108,78 @@ soccer-relevant fields strictly and tolerate the multi-sport tail via Zod v4 `z.
 `oneOf[Nil, ProofNode[]]`; the client normalises a JSON `null` to `[]`. `format: binary`
 fields (`hash`, `eventStatRoot`, sub-tree roots) arrive as (base64) strings and are kept as
 `string` — byte decoding is the on-chain layer's concern.
+
+## Verified live on DEVNET (Phase 4 spike — `txline-dev.txodds.com`)
+
+The Phase-4 spike exercised the **full token-gated path** end-to-end on the devnet host.
+Tokens below are **REDACTED** — never commit the JWT or API token (they go in gitignored
+`.dev.vars`). Both data reads require **both** headers.
+
+### `/api/token/activate` (devnet) — confirmed live
+
+```
+POST https://txline-dev.txodds.com/api/token/activate
+Authorization: Bearer <guest JWT>
+Content-Type: application/json
+{ "txSig": "<base58 subscribe sig>", "walletSignature": "<base64 ed25519>", "leagues": [] }
+→ 200  <API token, ~45 chars>          # plain text; World-Cup free tier = empty leagues
+```
+
+`walletSignature` = `nacl.sign.detached(utf8("{txSig}:{leagues.join(',')}:{jwt}"), secretKey)`,
+base64-encoded. Requires a confirmed on-chain `subscribe` tx first (devnet program
+`6pW64…wyP2J`, service level 1 = free).
+
+### `/api/fixtures/snapshot` (devnet) — confirmed live
+
+```
+GET https://txline-dev.txodds.com/api/fixtures/snapshot
+Authorization: Bearer <JWT>
+X-Api-Token: <API token>
+→ 200  [ { "FixtureId": 17588395, "Competition": "World Cup",
+           "Participant1": "South Africa", "Participant2": "South Korea",
+           "StartTime": 1782349200000, "CompetitionId": 72, ... }, … ]   # ~23 fixtures
+```
+
+> NOTE: the devnet feed uses **PascalCase** field names (`FixtureId`, `StartTime`,
+> `Participant1`, …) and does **not** carry `GameState` on the snapshot row — completion is
+> inferred from `StartTime < now` and confirmed from the score history's `game_finalised`.
+
+### `/api/scores/historical/{fixtureId}` (devnet) — confirmed live
+
+```
+GET https://txline-dev.txodds.com/api/scores/historical/17588395
+Authorization: Bearer <JWT>  ·  X-Api-Token: <API token>
+→ 200  [ { "FixtureId":17588395, "Seq":988, "GameState":"scheduled",
+           "Action":"game_finalised"/"disconnected", "Ts":1782356615778,
+           "Stats": { "1":1, "2":0, … } }, … ]   # 987 updates; PascalCase
+```
+
+Stat keys: `1` = Participant1_Score, `2` = Participant2_Score (final 1–0 here).
+
+### `/api/scores/stat-validation` (devnet) — confirmed live + verified on-chain
+
+```
+GET https://txline-dev.txodds.com/api/scores/stat-validation?fixtureId=17588395&seq=988&statKey=1
+Authorization: Bearer <JWT>  ·  X-Api-Token: <API token>
+→ 200  {
+  "ts": 1782356615778,
+  "statToProve": { "key":1, "value":1, "period":0 },
+  "eventStatRoot": [163,74,158, …],          # 32-byte number[] (NOT base64 on devnet)
+  "summary": { "fixtureId":17588395,
+               "updateStats": { "updateCount":60, "minTimestamp":1782355812812,
+                                "maxTimestamp":1782356098997 },
+               "eventStatsSubTreeRoot": [249,141,171, …] },   # 32-byte number[]
+  "statProof":    [ { "hash":[203,202,46,…], "isRightSibling":true }, … ],  # depth 6
+  "subTreeProof": [ { … } ],                                                # depth 1 (terminal seq)
+  "mainTreeProof":[ { … }, { … } ]                                          # depth 2
+}
+```
+
+> IMPORTANT for the on-chain call (devnet program `6pW64…wyP2J`, `validate_stat`):
+>
+> - 32-byte roots/hashes arrive as JSON **`number[]`** here (mainnet OpenAPI implied base64).
+> - The `validate_stat` `ts` arg = **`summary.updateStats.minTimestamp`** (used for both the
+>   `daily_scores_roots` PDA seed and the payload match); the top-level `ts` →
+>   `6010 TimestampMismatch`.
+> - `validate_stat` returns `bool` via return-data → read with Anchor `.view()` (free).
+>   Verified: predicate `value > 0` → TRUE, `value > 1` → FALSE (fixture 17588395 seq 988).
