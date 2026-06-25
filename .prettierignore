@@ -6,3 +6,4 @@ pnpm-lock.yaml
 **/*.generated.ts
 packages/*/src/generated/**
 packages/contracts/target/**
+packages/contracts/idl/**

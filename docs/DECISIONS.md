@@ -50,8 +50,36 @@ the resilience-kit manual-clock harness). On-chain settlement uses the recorded 
 against the real devnet root, so the verdict is reproducible.
 **Status:** Accepted.
 
+## ADR-0006 — Devnet on-chain flow + hosts (Phase 4 recon)
+
+**Decision/record (from the TxLINE docs + `github.com/txodds/tx-on-chain`):**
+
+- **Devnet API host is `https://txline-dev.txodds.com`** (`/auth/guest/start` → HTTP 200).
+  The on-chain example's `oracle-dev.txodds.com` is unreachable (HTTP 000) — stale. Prod
+  is `txline.txodds.com`. ClearLine selects the host via `TXLINE_API_BASE` (configurable).
+- **Activation flow** (from `backup/examples/data_validation/validate_scores_onchain.ts`):
+  guest `POST /auth/guest/start` → create the TxL **Token-2022** ATA → `subscribe(service_level_id, weeks)`
+  (the free World-Cup tier is **service level 1**; example calls `subscribe(1, 1)`) →
+  sign `"{txSig}:{leagues.join(',')}:{jwt}"` with the wallet (ed25519) → `POST /api/token/activate`
+  `{ txSig, walletSignature, leagues: [] }` → API token.
+- **`validate_stat`** args (IDL): `ts:i64, fixture_summary:ScoresBatchSummary,
+fixture_proof:ProofNode[], main_tree_proof:ProofNode[], predicate:TraderPredicate,
+stat_a:StatTerm, stat_b:Option<StatTerm>, op:Option<BinaryExpression>` → `bool`;
+  account `daily_scores_merkle_roots` (PDA `["daily_scores_roots", epochDay:u16]`).
+- The saved `packages/contracts/idl/txoracle.json` carries **mainnet** address
+  (`9ExbZjAapQww…`) + constants (TxL mint `Zhw9…`, `SUBSCRIPTION_PRICE_TOKEN=25_000_000`
+  = 25 TxL/wk, 6 decimals). The instruction/type **interface is shared**; for devnet
+  override `address` → `6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J` and mint →
+  `4Zao8ocPhmMgq7PdsYWyxvqySMGx7xb9cMftPMkEokRG` for Codama generation.
+- **Funding:** every live step needs devnet SOL (ATA rent + fees). `request_devnet_faucet`
+  yields testnet USDT; `purchase_subscription_token_usdt` buys TxL if the free tier still
+  requires a non-zero `price_per_week_token` (TBD — resolve once funded).
+  **Status:** Accepted (recon). Live execution blocked on devnet SOL (faucet 429).
+
 ## OPEN (to resolve in-phase)
 
 - Stat-validation auth header convention (Bearer-only vs Bearer + `X-Api-Token`) — Phase 1.
 - ClearLine `settle` mechanism: CPI into TxLINE `validateStat` vs. record an
   independently verified verdict — decided from the Phase-4 spike.
+- Whether free-tier `subscribe(1, …)` requires non-zero TxL (pricing_matrix SL1 price) —
+  resolve on first funded devnet run.
