@@ -81,10 +81,59 @@ stat_a:StatTerm, stat_b:Option<StatTerm>, op:Option<BinaryExpression>` → `bool
   requires a non-zero `price_per_week_token` (TBD — resolve once funded).
   **Status:** Accepted (recon). Live execution blocked on devnet SOL (faucet 429).
 
+## ADR-0007 — Phase-4 on-chain spike (LIVE devnet result)
+
+**Context:** wallet funded (5 SOL); we ran the spike against the devnet TxLINE program
+`6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J` and recorded the real behaviour.
+
+**Findings (all evidence-backed; see PROGRESS.md for txSig/Explorer):**
+
+- **Free-tier cost = ZERO TxL.** On-chain `pricing_matrix` `rowId=1` has
+  `price_per_week_token = 0`. The World-Cup SL1 tier needs **no TxL and no USDT faucet** —
+  only SOL for the Token-2022 ATA rent + tx fees. Resolves the OPEN free-tier question.
+- **`subscribe` weeks must be a multiple of 4** on the deployed devnet program
+  (`weeks=1` → error `6041 InvalidWeeks`, despite the official example's `subscribe(1,1)` —
+  the devnet build differs from the example). ClearLine calls `subscribe(1, 4)` (still free).
+- **`validate_stat` `ts` arg = `summary.updateStats.minTimestamp`**, NOT the top-level
+  `validation.ts`. The program uses this `ts` both for the `daily_scores_roots` PDA seed
+  AND matches it to the batch payload; `validation.ts` (and `maxTimestamp`) → error
+  `6010 TimestampMismatch`. (The docs MDX example is correct here; the `validate_scores`
+  example passing `validation.ts` is wrong for this devnet build.)
+- **Devnet feed encodes 32-byte roots/hashes as JSON `number[]` arrays**, not the base64
+  strings the mainnet OpenAPI `format: binary` implied. Pass them straight through.
+- **`validate_stat` returns `bool` via Solana return-data**, decoded by Anchor `.view()`
+  (read-only simulation, no fee, no signature). The saved mainnet IDL omits the `returns`
+  field, which blocks `.view()`; the devnet-patched IDL adds `returns: "bool"`.
+- **Compute budget:** terminal-seq proofs (shallow sub-tree, depth 1) cost ~150k CU and fit
+  the 1.4M limit; deep mid-match seqs (sub-tree depth 6) exceed it (`ProgramFailedToComplete`).
+  Pick the terminal update; set `setComputeUnitLimit(1_400_000)`.
+- **Result:** for fixture 17588395 seq 988 statKey 1 (V=1) against the live root PDA, the
+  on-chain check **discriminated correctly** — predicate `value > 0` → TRUE (return `AQ==`),
+  `value > 1` → FALSE.
+
+**Decisions:**
+
+- **Spike uses `@coral-xyz/anchor` (web3.js v1)** — sanctioned for this isolated, throwaway
+  risk node only (ADR-0003 still governs product code: the runtime `OnChainSettlementProvider`
+  in `packages/chain` will use `@solana/kit` + Codama-generated clients, sent via
+  solana-resilience-kit). The spike lives in `packages/contracts/spike/**`, outside the TS
+  workspace gate (eslint/tsconfig/prettier ignore it); `packages/contracts` has its own
+  `package.json` with the spike-only deps and is excluded from `pnpm -r typecheck/build`.
+- **ClearLine `settle` records an independently-verified verdict (NOT a CPI into
+  TxLINE `validateStat`).** Rationale: `validate_stat` is a read-style instruction that
+  returns a bool by return-data and does not mutate state; verifying it is a free `.view()`.
+  CPI-ing into it from `clearline_settlement` would add ~150k+ CU per settlement, couple us
+  to its weeks/ts/encoding quirks, and gain nothing — the proof is already verifiable against
+  the public `daily_scores_roots` root. So `clearline_settlement.settle` takes the
+  off-chain-computed verdict (the agent first runs the same `validate_stat` `.view()` to
+  confirm the proof on-chain) and records it on the Position. Resolves the OPEN settle-mechanism
+  question.
+
+**Status:** Accepted.
+
 ## OPEN (to resolve in-phase)
 
-- Stat-validation auth header convention (Bearer-only vs Bearer + `X-Api-Token`) — Phase 1.
-- ClearLine `settle` mechanism: CPI into TxLINE `validateStat` vs. record an
-  independently verified verdict — decided from the Phase-4 spike.
-- Whether free-tier `subscribe(1, …)` requires non-zero TxL (pricing_matrix SL1 price) —
-  resolve on first funded devnet run.
+- _(resolved)_ Stat-validation auth header convention → Bearer + `X-Api-Token` (Phase 1, API.md).
+- _(resolved by ADR-0007)_ ClearLine `settle` mechanism → record independently-verified verdict
+  (no CPI).
+- _(resolved by ADR-0007)_ Free-tier `subscribe` TxL cost → zero (SL1 `price_per_week_token = 0`).
