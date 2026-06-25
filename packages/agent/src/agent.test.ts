@@ -5,10 +5,12 @@ import {
   DEMO_FIXTURE_ID,
   InMemoryPositionStore,
   LocalSettlementProvider,
+  REAL_FIXTURE_ID,
   ReplayClock,
   loadDemoFixture,
   makeOverGoalsStrategy,
   runDemoReplay,
+  runRealDemoReplay,
   type ReplayResult,
 } from "./index";
 
@@ -113,5 +115,50 @@ describe("runDemoReplay", () => {
 
   it("rejects an unknown fixture id", async () => {
     await expect(runDemoReplay(123)).rejects.toThrow();
+  });
+
+  it("routes the real fixture id to the recorded on-chain verdict", async () => {
+    const viaDemo = await runDemoReplay(REAL_FIXTURE_ID);
+    const direct = await runRealDemoReplay();
+    expect(stable(viaDemo)).toEqual(stable(direct));
+  });
+});
+
+describe("runRealDemoReplay", () => {
+  it("settles on the REAL on-chain verdict (holds:true) deterministically", async () => {
+    const a = await runRealDemoReplay();
+    const b = await runRealDemoReplay();
+    expect(stable(a)).toEqual(stable(b));
+
+    expect(a.fixtureId).toBe(REAL_FIXTURE_ID);
+    expect(a.positions).toHaveLength(1);
+    expect(a.positions[0]?.status).toBe("won");
+    expect(a.settlements).toHaveLength(1);
+    expect(a.settlements[0]?.holds).toBe(true);
+    expect(a.settlements[0]?.source).toBe("onchain");
+    expect(a.settlements[0]?.verifiedOnChain).toBe(true);
+  });
+
+  it("carries the real Explorer link, root PDA, and program id", async () => {
+    const result = await runRealDemoReplay();
+    expect(result.onchain?.verdictSource).toBe("onchain-recorded");
+    expect(result.onchain?.subscribeExplorer).toMatch(
+      /^https:\/\/explorer\.solana\.com\/tx\/.+\?cluster=devnet$/,
+    );
+    expect(result.onchain?.dailyScoresRootsPda).toBe(
+      "CdUmkUdc4XBKeeq7Kq6JxQvnVMNuDA21mp98x4Rs3jHQ",
+    );
+    expect(result.onchain?.programId).toBe("6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J");
+    // Settlement outcome also surfaces the on-chain evidence.
+    expect(result.settlements[0]?.explorerUrl).toBe(result.onchain?.subscribeExplorer);
+    expect(result.settlements[0]?.rootPda).toBe(result.onchain?.dailyScoresRootsPda);
+  });
+
+  it("computes integer P&L > 0 on the winning real verdict", async () => {
+    const result = await runRealDemoReplay();
+    expect(typeof result.pnlLamports).toBe("bigint");
+    expect(result.pnlLamports > 0n).toBe(true);
+    // Stake 1_000_000 @ 1.8x → profit 800_000 lamports.
+    expect(result.pnlLamports).toBe(800_000n);
   });
 });

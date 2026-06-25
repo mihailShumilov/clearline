@@ -33,12 +33,30 @@ export interface RunReplayArgs {
   readonly rng?: Rng;
 }
 
+/**
+ * Surfaced on-chain proof for a replay settled against a REAL recorded verdict
+ * (ADR-0005, ADR-0007). Present only on the real-fixture path so the future
+ * API/dashboard can render the proof; absent for the synthetic local replay.
+ */
+export interface ReplayOnChainProof {
+  /** Solana Explorer URL for the `validate_stat` subscribe transaction. */
+  readonly subscribeExplorer: string;
+  /** The published `daily_scores_roots` PDA the verdict was verified against. */
+  readonly dailyScoresRootsPda: string;
+  /** The TxLINE program id the verdict was verified against. */
+  readonly programId: string;
+  /** Marks the verdict as reconciled against a recorded on-chain result. */
+  readonly verdictSource: "onchain-recorded";
+}
+
 /** Deterministic outcome of a replay. `pnlLamports` is the summed net P&L. */
 export interface ReplayResult {
   readonly fixtureId: number;
   readonly positions: Position[];
   readonly settlements: SettlementOutcome[];
   readonly pnlLamports: bigint;
+  /** On-chain proof, present only when settled against a real recorded verdict. */
+  readonly onchain?: ReplayOnChainProof;
 }
 
 /** Stable position id for a fixture — single position per fixture in the replay. */
