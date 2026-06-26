@@ -8,10 +8,20 @@
  *  - `error: (issue) => ...` for custom messages (replaces `invalid_type_error`).
  *
  * Note on `format: binary` fields (`hash`, `eventStatRoot`, sub-tree roots): the
- * JSON encoding delivers these as (base64) strings, so they are modelled as
- * `z.string()`; decoding to bytes is the on-chain layer's concern (§10).
+ * mainnet OpenAPI marks these `format: binary` (base64 strings), but the DEVNET feed
+ * delivers them as JSON `number[]` byte arrays (ADR-0007). They are therefore modelled
+ * as {@link MerkleBytesSchema} (`string | number[]`); decoding to fixed 32-byte values
+ * is the on-chain layer's concern (`@clearline/chain` `normalizeStatValidation`, §10).
  */
 import { z } from "zod";
+
+/**
+ * A 32-byte Merkle value on the wire: a base64 string (mainnet OpenAPI `format: binary`)
+ * OR a JSON `number[]` of byte values (the devnet feed). Kept as the raw wire value; the
+ * on-chain layer normalizes either encoding to bytes (§10, ADR-0007).
+ */
+export const MerkleBytesSchema = z.union([z.string(), z.array(z.int())]);
+export type MerkleBytes = z.infer<typeof MerkleBytesSchema>;
 
 /* -------------------------------------------------------------------------- */
 /* Auth                                                                        */
@@ -44,9 +54,9 @@ export const ScoreStatSchema = z.strictObject({
 });
 export type ScoreStat = z.infer<typeof ScoreStatSchema>;
 
-/** One node in a Merkle proof path. `hash` is a (base64) string of raw bytes. */
+/** One node in a Merkle proof path. `hash` is base64 OR a `number[]` (see {@link MerkleBytesSchema}). */
 export const ProofNodeSchema = z.strictObject({
-  hash: z.string(),
+  hash: MerkleBytesSchema,
   isRightSibling: z.boolean(),
 });
 export type ProofNode = z.infer<typeof ProofNodeSchema>;
@@ -68,11 +78,11 @@ export const ScoresUpdateStatsSchema = z.strictObject({
 });
 export type ScoresUpdateStats = z.infer<typeof ScoresUpdateStatsSchema>;
 
-/** Per-fixture batch summary; `eventStatsSubTreeRoot` is a (base64) byte string. */
+/** Per-fixture batch summary; `eventStatsSubTreeRoot` is base64 OR a `number[]`. */
 export const ScoresBatchSummarySchema = z.strictObject({
   fixtureId: z.int(),
   updateStats: ScoresUpdateStatsSchema,
-  eventStatsSubTreeRoot: z.string(),
+  eventStatsSubTreeRoot: MerkleBytesSchema,
 });
 export type ScoresBatchSummary = z.infer<typeof ScoresBatchSummarySchema>;
 
@@ -80,7 +90,7 @@ export type ScoresBatchSummary = z.infer<typeof ScoresBatchSummarySchema>;
 export const ScoresStatValidationSchema = z.strictObject({
   ts: z.int(),
   statToProve: ScoreStatSchema,
-  eventStatRoot: z.string(),
+  eventStatRoot: MerkleBytesSchema,
   summary: ScoresBatchSummarySchema,
   statProof: ProofNodeListSchema,
   subTreeProof: ProofNodeListSchema,

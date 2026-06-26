@@ -7,7 +7,7 @@
  */
 
 /** The category of a {@link ChainError}. */
-export type ChainErrorKind = "config" | "cluster";
+export type ChainErrorKind = "config" | "cluster" | "onchain";
 
 /** Structured fields carried by every {@link ChainError}. */
 export interface ChainErrorInfo {
@@ -59,6 +59,15 @@ export function chainConfigError(code: string, message: string): ChainError {
 /** Construct a `kind: "cluster"` error (cluster guard / mismatch). */
 export function chainClusterError(code: string, message: string): ChainError {
   return new ChainError({ kind: "cluster", code, message });
+}
+
+/**
+ * Construct a `kind: "onchain"` error (a `validate_stat` simulation or proof
+ * encoding failure). `detail` is non-secret context (e.g. simulation logs or the
+ * comparison/threshold) for diagnostics; never put RPC URLs or keys in it.
+ */
+export function chainOnchainError(code: string, message: string, detail?: unknown): ChainError {
+  return new ChainError({ kind: "onchain", code, message, detail });
 }
 
 /** Type guard for {@link ChainError}. */

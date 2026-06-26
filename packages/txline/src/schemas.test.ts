@@ -88,6 +88,13 @@ describe("ProofNodeSchema / ProofNodeListSchema", () => {
     ];
     expect(ProofNodeListSchema.parse(nodes)).toEqual(nodes);
   });
+
+  it("accepts a number[] hash encoding (the devnet feed, ADR-0007)", () => {
+    const node = { hash: Array.from({ length: 32 }, (_, i) => i), isRightSibling: false };
+    const out = ProofNodeSchema.parse(node);
+    expect(Array.isArray(out.hash)).toBe(true);
+    expect(out.hash).toHaveLength(32);
+  });
 });
 
 describe("ScoresStatValidationSchema", () => {
@@ -130,6 +137,20 @@ describe("ScoresStatValidationSchema", () => {
   it("rejects a missing required field", () => {
     const { ts: _ts, ...rest } = single;
     expect(ScoresStatValidationSchema.safeParse(rest).success).toBe(false);
+  });
+
+  it("parses a number[]-encoded validation (the devnet feed)", () => {
+    const bytes32 = Array.from({ length: 32 }, (_, i) => i % 256);
+    const devnet = {
+      ...single,
+      eventStatRoot: bytes32,
+      summary: { ...single.summary, eventStatsSubTreeRoot: bytes32 },
+      statProof: [{ hash: bytes32, isRightSibling: true }],
+      mainTreeProof: [{ hash: bytes32, isRightSibling: false }],
+    };
+    const out = ScoresStatValidationSchema.parse(devnet);
+    expect(Array.isArray(out.eventStatRoot)).toBe(true);
+    expect(out.statProof[0]?.hash).toHaveLength(32);
   });
 });
 

@@ -101,11 +101,12 @@ stat_a:StatTerm, stat_b:Option<StatTerm>, op:Option<BinaryExpression>` → `bool
   example passing `validation.ts` is wrong for this devnet build.)
 - **Devnet feed encodes 32-byte roots/hashes as JSON `number[]` arrays**, not the base64
   strings the mainnet OpenAPI `format: binary` implied. Pass them straight through.
-  NOTE: the recorded fixture (`packages/agent/src/fixtures/wc-real-17588395.json`) therefore
-  stores `eventStatRoot`/proof `hash` as `number[]`, which diverges from
-  `txline/schemas.ts` `ScoresStatValidationSchema` (`z.string()`). The Phase-5 replay layer
-  must normalize (`number[]` → bytes) rather than `.parse()` the saved file with that schema
-  directly — or the txline schema should accept both encodings.
+  NOTE _(resolved by ADR-0008)_: the recorded fixture
+  (`packages/agent/src/fixtures/wc-real-17588395.json`) stores `eventStatRoot`/proof `hash`
+  as `number[]`, which diverged from `txline/schemas.ts` `ScoresStatValidationSchema`
+  (`z.string()`). Now reconciled: the txline Merkle byte fields accept `string | number[]`
+  (`MerkleBytesSchema`), and `@clearline/chain`'s `normalizeStatValidation` decodes either
+  encoding to fixed 32-byte values.
 - **`validate_stat` returns `bool` via Solana return-data**, decoded by Anchor `.view()`
   (read-only simulation, no fee, no signature). The saved mainnet IDL omits the `returns`
   field, which blocks `.view()`; the devnet-patched IDL adds `returns: "bool"`.
@@ -134,6 +135,41 @@ stat_a:StatTerm, stat_b:Option<StatTerm>, op:Option<BinaryExpression>` → `bool
   confirm the proof on-chain) and records it on the Position. Resolves the OPEN settle-mechanism
   question.
 
+**Status:** Accepted.
+
+## ADR-0008 — Hand-rolled kit Borsh encoder for `validate_stat` (not Codama)
+
+**Context:** Task 1 wires the production `OnChainSettlementProvider` to emit the REAL
+on-chain verdict from the agent's settlement path (not the throwaway spike). ADR-0003 and
+ADR-0007 anticipated a **Codama-generated** `@solana/kit` client from the TxLINE IDL for the
+write/read clients. In practice the trustless settlement path needs exactly **one**
+read-only instruction — `validate_stat` — invoked via simulation (`.view()`).
+
+**Decision:** encode that single instruction with a small, transparent hand-rolled Borsh
+writer (`packages/chain/src/validateStat.ts` `ByteWriter` + `encodeValidateStatData`) instead
+of generating a Codama client, and route the simulation through `@clearline/chain`
+(`pool.rpc().simulateTransaction`, §11b). The encoder's correctness is locked by a
+**byte-for-byte golden vector** (`packages/agent/src/onchainEncode.test.ts`) generated from
+the Anchor coder over the recorded fixture — the same bytes the live-proven spike sent — plus
+MockEndpoint simulate tests and an opt-in live test.
+
+**Rationale:**
+
+- **One instruction, read-only.** Generating + wiring a Codama renderer (the pinned set has
+  `codama` + `@codama/nodes-from-anchor` but **no JS renderer**) for a single `.view()` call
+  adds a dependency and a code-gen step disproportionate to the surface. The deployed devnet
+  program also diverges from the published IDL in documented ways (ADR-0007: weeks%4, `ts` =
+  `minTimestamp`, `number[]` encodings), so generated bindings would still need hand-tuning.
+- **Transparency + auditability.** The hand-rolled layout is ~30 lines mapping 1:1 to the IDL
+  type definitions and is verified byte-identical to Anchor's output; reviewers can read the
+  exact wire format rather than trust an opaque generated client.
+- **Honors §11b / ADR-0003 intent.** No Anchor TS client and no bare `@solana/kit` RPC at
+  runtime: all RPC goes through the resilient pool; the kit imports are pure builders/codecs.
+
+**Consequences:** if ClearLine later needs many TxLINE instructions (or the `clearline_settlement`
+write client), revisit Codama generation then. For the single `validate_stat` read path, the
+hand-rolled encoder is the simpler, more auditable choice. Supersedes the ADR-0003/0007 phrasing
+"Codama-generated clients" **for this one instruction** only.
 **Status:** Accepted.
 
 ## OPEN (to resolve in-phase)

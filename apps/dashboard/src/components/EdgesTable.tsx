@@ -1,6 +1,7 @@
 /**
- * Edges / Positions table — the agent's staked predicates and where they landed:
- * fixture, human-readable predicate, stake, price, status, and P&L (§7 Phase 7).
+ * Edges & positions ledger — the agent's staked predicates and where they landed:
+ * fixture, human-readable predicate, stake, price, status, and P&L. A control-room
+ * panel.
  */
 import type { Position } from "../api/client";
 import { describePredicate, formatBps, formatSol, signOf } from "../format";
@@ -15,20 +16,23 @@ function StatusPill({ status }: { status: Position["status"] }): React.JSX.Eleme
 
 export function EdgesTable({ positions }: Props): React.JSX.Element {
   return (
-    <section className="block" aria-labelledby="edges-title">
-      <header className="block__head">
-        <h2 id="edges-title" className="block__title">
-          Edges &amp; Positions
-        </h2>
-        <span className="block__count mono">{positions.length}</span>
-      </header>
+    <section className="panel" aria-labelledby="edges-title">
+      <div className="panel__head">
+        <h3 id="edges-title" className="panel__title">
+          Edges &amp; positions
+        </h3>
+        <span className="panel__summary">
+          {positions.length}
+          <small>staked</small>
+        </span>
+      </div>
 
       {positions.length === 0 ? (
-        <p className="block__empty">
-          No edges yet. Run a demo replay to drive the pipeline and stake a predicate.
+        <p className="panel__empty">
+          No edges yet. Run the demo above to drive the pipeline and stake a predicate.
         </p>
       ) : (
-        <div className="table-wrap">
+        <div className="ledger-wrap">
           <table className="ledger">
             <thead>
               <tr>

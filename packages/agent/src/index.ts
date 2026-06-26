@@ -57,11 +57,17 @@ export {
   LocalSettlementProvider,
   RecordedSettlementProvider,
   OnChainSettlementProvider,
+  RecordedProofSource,
+  LiveProofSource,
   SettlementError,
   type SettlementErrorCode,
   type SettlementProvider,
   type SettlementOutcome,
   type SettleArgs,
+  type ProofSource,
+  type ResolvedProof,
+  type SeqResolution,
+  type OnChainSettlementOptions,
 } from "./settlement";
 
 // Store
@@ -85,6 +91,8 @@ export {
 export {
   runDemoReplay,
   runRealDemoReplay,
+  settleRealFixtureOnChain,
+  realTruePredicate,
   loadDemoFixture,
   loadRealDemoFixture,
   DEMO_SEED,
