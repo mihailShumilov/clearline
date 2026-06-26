@@ -87,6 +87,7 @@ function makeApp(overrides?: {
     repo,
     health: overrides?.health ?? (async () => healthySnapshot),
     runReplay: overrides?.runReplay ?? (async (fixtureId) => fakeReplayResult(fixtureId)),
+    liveTail: false,
   });
   return { app, repo };
 }

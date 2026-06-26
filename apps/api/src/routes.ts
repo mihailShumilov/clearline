@@ -23,6 +23,12 @@ export interface AppDeps {
   readonly health: () => Promise<HealthSnapshotDTO>;
   /** Runs a deterministic replay; defaults to the real fixture when no id given. */
   readonly runReplay: (fixtureId?: number) => Promise<ReplayResult>;
+  /**
+   * Whether `/api/events` holds the SSE connection open and live-tails new events
+   * (production). Defaults to `true`; tests set `false` so the stream ends and
+   * `app.request(...)` resolves.
+   */
+  readonly liveTail?: boolean;
 }
 
 /** Request body for `POST /api/demo-replay` — an optional fixture id. */
@@ -243,23 +249,48 @@ export function createApp(deps: AppDeps): Hono {
     return c.json(replayResultToJSON(result));
   });
 
-  // SSE: replay every stored event, then a final heartbeat, so the dashboard's
-  // live panel can hydrate. (The Cron/Durable-Object live tail is a later phase —
-  // ADR-0002; this phase serves the persisted log + a heartbeat.)
+  // SSE: hydrate from the persisted log, then HOLD the connection open and push
+  // new events as they land, with a periodic heartbeat. `Last-Event-ID` (sent by
+  // the browser on reconnect) is honoured so we never re-send the backlog — the
+  // client gets a clean, de-duplicated, non-flapping live tail.
   app.get("/api/events", (c) => {
     return streamSSE(c, async (stream) => {
-      const stored = await deps.repo.listEvents();
-      for (const event of stored) {
-        await stream.writeSSE({
-          id: String(event.id),
-          event: event.kind,
-          data: JSON.stringify({ ts: event.ts, kind: event.kind, data: event.data }),
-        });
-      }
-      await stream.writeSSE({
-        event: "heartbeat",
-        data: JSON.stringify({ ts: Date.now() }),
+      const header = c.req.header("Last-Event-ID");
+      let lastId = header !== undefined && /^\d+$/.test(header) ? Number(header) : 0;
+      let aborted = false;
+      stream.onAbort(() => {
+        aborted = true;
       });
+
+      const flush = async (): Promise<void> => {
+        const stored = [...(await deps.repo.listEvents())].sort((a, b) => a.id - b.id);
+        for (const event of stored) {
+          if (event.id <= lastId) continue;
+          await stream.writeSSE({
+            id: String(event.id),
+            event: event.kind,
+            data: JSON.stringify({ ts: event.ts, kind: event.kind, data: event.data }),
+          });
+          lastId = event.id;
+        }
+      };
+
+      await flush();
+
+      if (deps.liveTail === false) {
+        // Bounded mode (tests): one heartbeat, then end so app.request resolves.
+        await stream.writeSSE({ event: "heartbeat", data: JSON.stringify({ ts: Date.now() }) });
+        return;
+      }
+
+      // Keep the stream alive (no close ⇒ no client reconnect/flap); poll for new
+      // events and heartbeat until the client disconnects.
+      while (!aborted) {
+        await stream.sleep(10_000);
+        if (aborted) break;
+        await flush();
+        await stream.writeSSE({ event: "heartbeat", data: JSON.stringify({ ts: Date.now() }) });
+      }
     });
   });
 

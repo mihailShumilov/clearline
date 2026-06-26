@@ -105,6 +105,8 @@ export function App(): React.JSX.Element {
       onError: () => setStreamConnected(false),
       onEvent: (event) => {
         setEvents((prev) => {
+          // De-duplicate by SSE frame id (reconnects must not double-append).
+          if (event.id !== undefined && prev.some((e) => e.id === event.id)) return prev;
           const next = [...prev, event];
           return next.length > MAX_EVENTS ? next.slice(next.length - MAX_EVENTS) : next;
         });

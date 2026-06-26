@@ -180,7 +180,8 @@ const LiveEventSchema = z.object({
   kind: z.string(),
   data: z.unknown(),
 });
-export type LiveEvent = z.infer<typeof LiveEventSchema>;
+/** A live event plus its SSE frame id (used to de-duplicate on reconnect). */
+export type LiveEvent = z.infer<typeof LiveEventSchema> & { id?: string };
 
 /* -------------------------------------------------------------------- errors */
 
@@ -286,7 +287,7 @@ export function subscribeEvents(handlers: {
     }
     const parsed = LiveEventSchema.safeParse(raw);
     if (parsed.success) {
-      handlers.onEvent(parsed.data);
+      handlers.onEvent({ ...parsed.data, ...(ev.lastEventId ? { id: ev.lastEventId } : {}) });
     }
   };
 
