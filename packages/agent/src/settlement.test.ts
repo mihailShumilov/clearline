@@ -1,14 +1,47 @@
 import { describe, expect, it } from "vitest";
+import type { ChainPool } from "@clearline/chain";
 import { evaluatePredicate, type Predicate, type Stat } from "@clearline/core";
 import {
   LocalSettlementProvider,
   OnChainSettlementProvider,
+  RecordedProofSource,
   RecordedSettlementProvider,
   SettlementError,
   loadRealFixture,
   type RealFixture,
 } from "./index";
 import wcReal from "./fixtures/wc-real-17588395.json";
+
+/**
+ * A minimal {@link ChainPool} whose `simulateTransaction` returns canned return-data —
+ * lets us drive {@link OnChainSettlementProvider} without a live RPC. (The full simulate
+ * path is covered live-style with MockEndpoint in `@clearline/chain`'s validateStat test.)
+ */
+function fakePool(returnDataBase64: string | null, err: unknown = null): ChainPool {
+  const send = async (): Promise<unknown> => ({
+    value: {
+      err,
+      logs: [],
+      returnData:
+        returnDataBase64 === null
+          ? null
+          : {
+              programId: "6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J",
+              data: [returnDataBase64, "base64"],
+            },
+    },
+  });
+  const rpc = { simulateTransaction: () => ({ send }) };
+  return { rpc: () => rpc } as unknown as ChainPool;
+}
+
+/** The recorded fixture's raw three-stage proof (bundled), for the on-chain provider. */
+const realFixture: RealFixture = loadRealFixture(wcReal);
+const recordedProof = (): RecordedProofSource =>
+  new RecordedProofSource(realFixture.statValidation as unknown);
+const onChainStat = (value: number): Stat[] => [
+  { key: realFixture.chosen.statKey, value, period: realFixture.statValidation.statToProve.period },
+];
 
 const stats: Stat[] = [
   { key: 1, value: 2, period: 0 },
@@ -170,15 +203,143 @@ describe("RecordedSettlementProvider", () => {
   });
 });
 
-describe("OnChainSettlementProvider", () => {
-  it("throws the typed not-wired error (never fakes a result)", async () => {
-    const predicate: Predicate = { kind: "single", statKey: 100, op: ">=", threshold: 2 };
-    const provider = new OnChainSettlementProvider();
+describe("RecordedSettlementProvider — honest verifiedOnChain", () => {
+  const fixture: RealFixture = loadRealFixture(wcReal);
+
+  it("verifiedOnChain is true ONLY when a recorded verdict was cross-checked", async () => {
+    // value > 0 reconciles against the recorded truePredicate verdict.
+    const reconciled = await new RecordedSettlementProvider(fixture).settle({
+      fixtureId: fixture.fixtureId,
+      predicate: {
+        kind: "single",
+        statKey: fixture.chosen.statKey,
+        period: 0,
+        op: ">",
+        threshold: 0,
+      },
+      statsAtSettle: onChainStat(fixture.chosen.statValue),
+    });
+    expect(reconciled.verifiedOnChain).toBe(true);
+
+    // value > 5 has NO recorded counterpart — evidence is surfaced but the verdict was
+    // not itself reconciled, so verifiedOnChain must be false (no fabrication).
+    const unreconciled = await new RecordedSettlementProvider(fixture).settle({
+      fixtureId: fixture.fixtureId,
+      predicate: {
+        kind: "single",
+        statKey: fixture.chosen.statKey,
+        period: 0,
+        op: ">",
+        threshold: 5,
+      },
+      statsAtSettle: onChainStat(fixture.chosen.statValue),
+    });
+    expect(unreconciled.holds).toBe(false);
+    expect(unreconciled.verifiedOnChain).toBe(false);
+    expect(unreconciled.source).toBe("onchain");
+  });
+});
+
+describe("OnChainSettlementProvider (live trustless path)", () => {
+  const truePredicate: Predicate = {
+    kind: "single",
+    statKey: realFixture.chosen.statKey,
+    period: 0,
+    op: ">",
+    threshold: 0,
+  };
+
+  it("returns the real on-chain verdict (AQ== → holds:true) with evidence", async () => {
+    const provider = new OnChainSettlementProvider({
+      pool: fakePool("AQ=="),
+      proofSource: recordedProof(),
+      evidence: {
+        signature: realFixture.onchain.subscribeTxSig,
+        explorerUrl: realFixture.onchain.subscribeExplorer,
+      },
+    });
+    const outcome = await provider.settle({
+      fixtureId: realFixture.fixtureId,
+      predicate: truePredicate,
+      statsAtSettle: onChainStat(realFixture.chosen.statValue),
+    });
+    expect(outcome.holds).toBe(true);
+    expect(outcome.source).toBe("onchain");
+    expect(outcome.verifiedOnChain).toBe(true);
+    expect(outcome.rootPda).toBe(realFixture.onchain.dailyScoresRootsPda);
+    expect(outcome.programId).toBe(realFixture.onchain.programId);
+    expect(outcome.signature).toBe(realFixture.onchain.subscribeTxSig);
+  });
+
+  it("returns holds:false for the recorded FALSE predicate (AA==)", async () => {
+    const provider = new OnChainSettlementProvider({
+      pool: fakePool("AA=="),
+      proofSource: recordedProof(),
+    });
+    const outcome = await provider.settle({
+      fixtureId: realFixture.fixtureId,
+      predicate: { ...truePredicate, threshold: 1 },
+      statsAtSettle: onChainStat(realFixture.chosen.statValue),
+    });
+    expect(outcome.holds).toBe(false);
+    expect(outcome.verifiedOnChain).toBe(true);
+  });
+
+  it("throws verdict-mismatch when the on-chain verdict contradicts the off-chain decision", async () => {
+    // Off-chain: value(1) > 0 = true; force the on-chain sim to say false (AA==).
+    const provider = new OnChainSettlementProvider({
+      pool: fakePool("AA=="),
+      proofSource: recordedProof(),
+    });
     await expect(
-      provider.settle({ fixtureId: 1, predicate, statsAtSettle: stats }),
-    ).rejects.toMatchObject({ code: "not-wired" });
+      provider.settle({
+        fixtureId: realFixture.fixtureId,
+        predicate: truePredicate,
+        statsAtSettle: onChainStat(realFixture.chosen.statValue),
+      }),
+    ).rejects.toMatchObject({ code: "verdict-mismatch" });
+  });
+
+  it("throws verdict-mismatch when the observed value diverges from the proven value", async () => {
+    const provider = new OnChainSettlementProvider({
+      pool: fakePool("AQ=="),
+      proofSource: recordedProof(),
+    });
     await expect(
-      provider.settle({ fixtureId: 1, predicate, statsAtSettle: stats }),
+      provider.settle({
+        fixtureId: realFixture.fixtureId,
+        predicate: truePredicate,
+        statsAtSettle: onChainStat(realFixture.chosen.statValue + 4), // observed != proven
+      }),
+    ).rejects.toMatchObject({ code: "verdict-mismatch" });
+  });
+
+  it("throws unsupported-predicate for a margin (two-stat) predicate", async () => {
+    const provider = new OnChainSettlementProvider({
+      pool: fakePool("AQ=="),
+      proofSource: recordedProof(),
+    });
+    const margin: Predicate = { kind: "margin", statKey1: 1, statKey2: 2, op: ">", threshold: 0 };
+    await expect(
+      provider.settle({
+        fixtureId: realFixture.fixtureId,
+        predicate: margin,
+        statsAtSettle: stats,
+      }),
+    ).rejects.toMatchObject({ code: "unsupported-predicate" });
+  });
+
+  it("never fabricates: a typed SettlementError on any divergence", async () => {
+    const provider = new OnChainSettlementProvider({
+      pool: fakePool("AA=="),
+      proofSource: recordedProof(),
+    });
+    await expect(
+      provider.settle({
+        fixtureId: realFixture.fixtureId,
+        predicate: truePredicate,
+        statsAtSettle: onChainStat(realFixture.chosen.statValue),
+      }),
     ).rejects.toBeInstanceOf(SettlementError);
   });
 });

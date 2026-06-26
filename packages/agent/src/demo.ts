@@ -6,6 +6,7 @@
  * a {@link LocalSettlementProvider}, a fresh deterministic clock + seeded RNG, and a
  * silent logger by default. Two calls produce a deep-equal {@link ReplayResult}.
  */
+import type { ChainPool } from "@clearline/chain";
 import type { Position, Predicate, Stat } from "@clearline/core";
 import { makeEdge, settle as settleCore } from "@clearline/core";
 import { AgentRunner, type ReplayResult } from "./agent";
@@ -15,7 +16,13 @@ import type { Logger } from "./logger";
 import { noopLogger } from "./logger";
 import { createRng } from "./rng";
 import { loadRealFixture, type RealFixture } from "./realFixture";
-import { LocalSettlementProvider, RecordedSettlementProvider } from "./settlement";
+import {
+  LocalSettlementProvider,
+  OnChainSettlementProvider,
+  RecordedProofSource,
+  RecordedSettlementProvider,
+  type SettlementOutcome,
+} from "./settlement";
 import { InMemoryPositionStore } from "./store";
 import { makeOverGoalsStrategy } from "./strategy";
 import wcSample from "./fixtures/wc-sample.json";
@@ -48,6 +55,66 @@ export function loadDemoFixture(): RecordedFixture {
 /** Load the bundled REAL recorded devnet fixture (Zod-validated). */
 export function loadRealDemoFixture(): RealFixture {
   return loadRealFixture(wcReal);
+}
+
+/** The recorded single-stat predicate that HOLDS on-chain: chosen stat value > 0. */
+export function realTruePredicate(fixture: RealFixture): Predicate {
+  return {
+    kind: "single",
+    statKey: fixture.chosen.statKey,
+    period: fixture.statValidation.statToProve.period,
+    op: ">",
+    threshold: 0,
+  };
+}
+
+/**
+ * Settle the REAL recorded fixture against the LIVE on-chain Merkle root via the agent's
+ * production {@link OnChainSettlementProvider} (§10, §13). Uses the bundled three-stage
+ * proof and the resilient {@link ChainPool} to simulate TxLINE `validate_stat` (read-only
+ * `.view()`) — the verdict returned IS the real on-chain return-data bool, reconciled
+ * against the off-chain decision. This is the agent's trustless settlement path, distinct
+ * from the recorded-verdict replay ({@link runRealDemoReplay}).
+ *
+ * @param pool - the resilient RPC pool (`@clearline/chain`).
+ * @param predicate - the single-stat predicate to verify; defaults to the recorded TRUE
+ *   predicate (`value > 0`). Pass `{...op:">", threshold:1}` for the recorded FALSE case.
+ */
+export async function settleRealFixtureOnChain(
+  pool: ChainPool,
+  predicate?: Predicate,
+  logger: Logger = noopLogger,
+): Promise<SettlementOutcome> {
+  const fixture = loadRealDemoFixture();
+  const pred = predicate ?? realTruePredicate(fixture);
+  const provider = new OnChainSettlementProvider({
+    pool,
+    proofSource: new RecordedProofSource(fixture.statValidation as unknown),
+    evidence: {
+      signature: fixture.onchain.subscribeTxSig,
+      explorerUrl: fixture.onchain.subscribeExplorer,
+    },
+  });
+  const statsAtSettle: Stat[] = [
+    {
+      key: fixture.chosen.statKey,
+      value: fixture.chosen.statValue,
+      period: fixture.statValidation.statToProve.period,
+    },
+  ];
+  logger.info("settle.onchain.start", { fixtureId: fixture.fixtureId, predicate: pred });
+  const outcome = await provider.settle({
+    fixtureId: fixture.fixtureId,
+    predicate: pred,
+    statsAtSettle,
+  });
+  logger.info("settle.onchain.done", {
+    fixtureId: fixture.fixtureId,
+    holds: outcome.holds,
+    rootPda: outcome.rootPda,
+    verifiedOnChain: outcome.verifiedOnChain,
+  });
+  return outcome;
 }
 
 /**

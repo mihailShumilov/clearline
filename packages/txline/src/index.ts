@@ -28,6 +28,7 @@ export {
 export {
   TokenResponseSchema,
   ActivationPayloadSchema,
+  MerkleBytesSchema,
   ScoreStatSchema,
   ProofNodeSchema,
   ProofNodeListSchema,
@@ -42,6 +43,7 @@ export {
   ScoresArraySchema,
   type TokenResponse,
   type ActivationPayload,
+  type MerkleBytes,
   type ScoreStat,
   type ProofNode,
   type ScoresUpdateStats,

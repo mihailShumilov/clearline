@@ -22,8 +22,22 @@
 ## On-chain artifacts
 
 - subscribe tx: https://explorer.solana.com/tx/rGE1t1gAtNJAFCxLsLkKEek7rusKfrsrnqTQcMbCukNZhfdg9Tng3wfuBb5SjrUV3DXBvRqSa5efyPL4ukFYA8M?cluster=devnet (slot 471865973)
-- daily_scores_roots PDA (epochDay 20629): `CdUmkUdc4XBKeeq7Kq6JxQvnVMNuDA21mp98x4Rs3jHQ`
+- daily_scores_roots PDA (epochDay 20629): [`CdUmkUdc4XBKeeq7Kq6JxQvnVMNuDA21mp98x4Rs3jHQ`](https://explorer.solana.com/address/CdUmkUdc4XBKeeq7Kq6JxQvnVMNuDA21mp98x4Rs3jHQ?cluster=devnet)
 - verdicts: `value>0`→TRUE, `value>1`→FALSE (fixture 17588395, seq 988, statKey 1, V=1)
+
+## On-chain settlement — three sources, kept honestly distinct
+
+1. **Phase-4 spike (one-off, ADR-0007):** `@coral-xyz/anchor` `.view()` proved `validate_stat`
+   discriminates TRUE/FALSE on devnet. Throwaway; `packages/contracts/spike/**`.
+2. **Production `OnChainSettlementProvider` (Task 1, LIVE):** the agent's settlement path emits
+   the verdict by simulating `validate_stat` through `@clearline/chain` (read-only `.view()`,
+   no Anchor, §11b). Verified live against the root PDA above:
+   `value>0`→**TRUE**, `value>1`→**FALSE**. Encoder byte-identical to Anchor's (golden vector).
+   Reproduce: `ONCHAIN_LIVE=1 pnpm exec vitest run packages/agent/src/onchainLive.test.ts`.
+   Note: `.view()` is a simulation → no tx signature; the verdict is verified against the live
+   on-chain Merkle root (the `subscribe` tx above is the data-subscription evidence).
+3. **`RecordedSettlementProvider` (deterministic replay):** settles on the recorded verdict and
+   reconciles it; `verifiedOnChain=true` ONLY when a recorded on-chain result was cross-checked.
 
 ## Next (remaining for full §13)
 

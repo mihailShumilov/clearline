@@ -16,7 +16,13 @@ export {
 } from "./config";
 export type { ChainConfig, ChainEndpoint } from "./config";
 
-export { ChainError, chainClusterError, chainConfigError, isChainError } from "./errors";
+export {
+  ChainError,
+  chainClusterError,
+  chainConfigError,
+  chainOnchainError,
+  isChainError,
+} from "./errors";
 export type { ChainErrorInfo, ChainErrorKind } from "./errors";
 
 export { DEFAULT_MAX_SLOT_LAG, createChainPool } from "./pool";
@@ -27,6 +33,44 @@ export type { ChainSender, ChainSenderOptions } from "./sender";
 
 export { toHealthSnapshot } from "./health";
 export type { HealthEndpointDTO, HealthSnapshotDTO } from "./health";
+
+// Proof-encoding normalization (number[] vs base64) for the three-stage Merkle proof.
+export {
+  MERKLE_BYTES,
+  MerkleBytesWireSchema,
+  ProofNodeWireSchema,
+  ProofNodeListWireSchema,
+  normalizeStatValidation,
+  toBytes32,
+  toProofNodes,
+} from "./proofEncoding";
+export type {
+  MerkleBytesWire,
+  ProofNodeWire,
+  NormalizedProofNode,
+  NormalizedStatTerm,
+  NormalizedStatValidation,
+} from "./proofEncoding";
+
+// On-chain trustless settlement: encode + simulate TxLINE `validate_stat` (§10).
+export {
+  TXLINE_PROGRAM_ID_DEVNET,
+  VALIDATE_STAT_DISCRIMINATOR,
+  DAILY_SCORES_ROOTS_SEED,
+  DEFAULT_COMPUTE_UNIT_LIMIT,
+  DEFAULT_SIM_FEE_PAYER,
+  MS_PER_DAY,
+  encodeValidateStatData,
+  epochDayFromTs,
+  deriveDailyScoresRootsPda,
+  validateStatOnChain,
+} from "./validateStat";
+export type {
+  OnChainComparison,
+  OnChainPredicate,
+  ValidateStatVerdict,
+  ValidateStatOptions,
+} from "./validateStat";
 
 export { runLandingBench } from "./bench/landing";
 export type { LandingBenchConfig, LandingBenchResult } from "./bench/landing";
