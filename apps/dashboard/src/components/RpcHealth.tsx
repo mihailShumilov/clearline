@@ -1,10 +1,10 @@
 /**
- * RPC Health panel — the resilience-kit instrument rail (§11b, headline panel).
+ * RPC Health panel — control-room readout of the resilience-kit (§11b).
  *
- * Each endpoint is a "live readout": name, healthy state, slot odometer, latency
- * bar, error rate, consecutive failures, and a FRESHEST tag on the lead node.
- * Failover is made legible — an unhealthy node desaturates and shows its failure
- * streak, so killing an endpoint during the demo reads instantly.
+ * "The data feed never blinks": solana-resilience-kit keeps the oracle connection
+ * alive across providers and fails over automatically. Each endpoint shows its
+ * live slot, latency, error rate, and failure streak; an unhealthy node
+ * desaturates and a backup is revealed picking up the load.
  */
 import type { HealthSnapshot } from "../api/client";
 import { formatLatency, formatRate } from "../format";
@@ -25,45 +25,45 @@ export function RpcHealth({ snapshot, disconnected }: Props): React.JSX.Element 
   const healthy = snapshot?.healthyCount ?? 0;
   const total = snapshot?.totalCount ?? 0;
   const allDown = total > 0 && healthy === 0;
+  const summaryClass = disconnected
+    ? " panel__summary--off"
+    : allDown
+      ? " panel__summary--down"
+      : "";
 
   return (
-    <section className="rail-panel" aria-labelledby="rpc-health-title">
-      <header className="rail-panel__head">
-        <h2 id="rpc-health-title" className="rail-panel__title">
-          RPC Health
-        </h2>
-        <span
-          className={
-            "rpc-summary" +
-            (disconnected ? " rpc-summary--off" : allDown ? " rpc-summary--down" : "")
-          }
-        >
+    <section className="panel" aria-labelledby="rpc-health-title">
+      <div className="panel__head">
+        <h3 id="rpc-health-title" className="panel__title">
+          RPC health
+        </h3>
+        <span className={"panel__summary" + summaryClass}>
           {disconnected ? "—" : `${healthy}/${total}`}
-          <small>{disconnected ? "no API" : "healthy"}</small>
+          <small>{disconnected ? "no API" : "endpoints live"}</small>
         </span>
-      </header>
+      </div>
+      <p className="panel__note">
+        The data feed never blinks — solana-resilience-kit keeps the oracle connection alive across
+        providers, failing over automatically.
+      </p>
 
       {disconnected ? (
-        <p className="rail-panel__empty">
+        <p className="panel__empty">
           API unreachable. The dashboard reconnects automatically — start the worker with{" "}
           <code>wrangler dev</code>.
         </p>
       ) : !snapshot || snapshot.endpoints.length === 0 ? (
-        <p className="rail-panel__empty">No endpoints reported.</p>
+        <p className="panel__empty">No endpoints reported.</p>
       ) : (
-        <ul className="node-list" role="list">
+        <ul className="nodes" role="list">
           {snapshot.endpoints.map((ep) => (
-            <li
-              key={ep.name}
-              className={"node" + (ep.healthy ? "" : " node--down")}
-              data-freshest={ep.freshest}
-            >
+            <li key={ep.name} className={"node" + (ep.healthy ? "" : " node--down")}>
               <div className="node__top">
                 <span className="node__dot" aria-hidden="true" />
                 <span className="node__name">{ep.name}</span>
                 {ep.freshest && ep.healthy ? (
                   <span className="node__freshest" title="Highest observed slot">
-                    FRESHEST
+                    freshest
                   </span>
                 ) : null}
                 <span
@@ -71,7 +71,7 @@ export function RpcHealth({ snapshot, disconnected }: Props): React.JSX.Element 
                     "node__state" + (ep.healthy ? " node__state--up" : " node__state--down")
                   }
                 >
-                  {ep.healthy ? "HEALTHY" : "DOWN"}
+                  {ep.healthy ? "HEALTHY" : ep.freshest ? "FAILOVER" : "DOWN"}
                 </span>
               </div>
 
@@ -83,20 +83,20 @@ export function RpcHealth({ snapshot, disconnected }: Props): React.JSX.Element 
               <div className="node__metrics">
                 <div className="metric">
                   <span className="node__label">latency</span>
-                  <div className="latbar" aria-hidden="true">
+                  <span className="latbar" aria-hidden="true">
                     <span
                       className="latbar__fill"
                       style={{ width: `${latencyPct(ep.latencyMs)}%` }}
                     />
-                  </div>
+                  </span>
                   <span className="mono metric__val">{formatLatency(ep.latencyMs)}</span>
                 </div>
-                <div className="metric metric--inline">
+                <div className="metric">
                   <span className="node__label">errors</span>
                   <span className="mono metric__val">{formatRate(ep.errorRate)}</span>
                 </div>
                 {ep.consecutiveFailures > 0 ? (
-                  <div className="metric metric--inline metric--alarm">
+                  <div className="metric metric--alarm">
                     <span className="node__label">streak</span>
                     <span className="mono metric__val">{ep.consecutiveFailures}✕</span>
                   </div>
