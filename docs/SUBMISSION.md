@@ -83,7 +83,7 @@ curl "http://localhost:8787/__scheduled?cron=*+*+*+*+*"
    latency) with the public devnet backup as failover — the solana-resilience-kit story
    (naive 0% → pool 100%).
 5. **Reproducibility (15s):** re-run the replay (or `ONCHAIN_LIVE=1 vitest`) — identical edge
-   - verdict.
+   and verdict.
 6. **Close (10s):** recap trustlessness + the resilience-kit before/after metrics.
 
 ## Remaining (owner)
