@@ -55,7 +55,11 @@
 ## Next (remaining for full §13)
 
 - **Phase 9** — repo public ✅; complete docs ✅; **record the demo video** (§13 scenario) — owner action.
-- **Deploy** (owner) — `wrangler deploy` (Workers+D1) + Pages + `wrangler secret put SOLANA_RPC_PRIMARY` (keyed Helius) need `wrangler login`. The live loop settles via `onchain-live` once a non-IP-blocked RPC is configured (the public devnet 403-blocks the miniflare/workerd egress IP locally — ADR-0009).
+- **Deploy** ✅ — API (Workers + D1 + the `AgentLoop` DO + Cron) and dashboard (Pages) are live.
+  Remote D1 migrated (`0001`), `SOLANA_RPC_PRIMARY` (Helius) secret set, so the **deployed loop
+  settles `onchain-live`** against the live root (verified: `/api/agent/status` →
+  `verdictSource: "onchain-live"`, P&L 800,000). https://clearline-dashboard.pages.dev/ ·
+  https://clearline-api.mschumilow.workers.dev
 - **Deferred (ADR-0009)** — live polling of in-progress TxLINE fixtures + strategy over the live feed (World-Cup matches are over before judging; the deterministic replay is the demo vehicle). `LiveProofSource` + the SSE/snapshot reads are implemented and ready to wire.
 
 ## Resolved follow-ups

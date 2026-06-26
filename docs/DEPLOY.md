@@ -3,14 +3,19 @@
 > **Live now:**
 > Dashboard → https://clearline-dashboard.pages.dev/ · API → https://clearline-api.mschumilow.workers.dev
 > (Cloudflare account `michael@vadimages.com`; devnet only.)
+> The **autonomous loop** runs on a Cron Trigger + the `AgentLoop` Durable Object and settles
+> on the **live `validate_stat` verdict** (`SOLANA_RPC_PRIMARY` Helius secret is set, so the
+> Worker reaches devnet): `GET /api/agent/status` → `verdictSource: "onchain-live"`.
 
 ## Prerequisites
 
 - A Cloudflare account + `wrangler login` (the only manual gate). Free tier covers
   Workers + D1 + Pages.
-- **No secrets required for the demo:** the Worker defaults to public devnet RPC and serves
-  the _recorded_ on-chain verdict from D1. (Optional: `wrangler secret put SOLANA_RPC_PRIMARY`
-  for a private RPC; `TXLINE_*` only for _live_ ingest.)
+- **Secrets:** `SOLANA_RPC_PRIMARY` (a keyed **Helius devnet** URL) is set via
+  `wrangler secret put` — the deployed loop uses it to settle on the **live** `validate_stat`
+  verdict. Without it the Worker falls back to public devnet (which 403-blocks the workerd
+  egress IP) and settles on the _recorded-and-reconciled_ on-chain verdict — still verifiable.
+  (`TXLINE_*` only for _live_ in-play ingest, deferred per ADR-0009.)
 
 ## API (Hono Worker + D1)
 

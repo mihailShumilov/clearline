@@ -44,27 +44,50 @@ _The TxODDS Hackathon Challenge 2026 — World Cup. Network: devnet._
 
 ## Demo script (concrete — for the recording)
 
+**Zero-setup path (recommended): everything is LIVE on Cloudflare.** Just open the deployed
+dashboard — the autonomous loop is already running on a Cron Trigger and settling on the live
+on-chain verdict.
+
+- **Dashboard:** https://clearline-dashboard.pages.dev/
+- **API:** https://clearline-api.mschumilow.workers.dev — `/api/health`, `/api/settlements`,
+  `/api/agent/status`, `/api/agent/loop/status`.
+
 ```bash
-# Terminal A — API on Workers + local D1
-pnpm --filter @clearline/api exec wrangler d1 migrations apply clearline --local
-pnpm --filter @clearline/api dev          # http://localhost:8787
-# Terminal B — dashboard
-pnpm --filter @clearline/dashboard dev    # http://localhost:5173
+# Show the live autonomous settlement from a terminal (no setup):
+curl https://clearline-api.mschumilow.workers.dev/api/agent/status      # verdictSource: "onchain-live"
+curl https://clearline-api.mschumilow.workers.dev/api/settlements       # path: "onchain-live", verifiedOnChain: true
+curl https://clearline-api.mschumilow.workers.dev/api/health            # Helius primary healthy + real slot
 ```
 
-1. **Hook (15s):** "ClearLine — an autonomous agent that settles sports edges trustlessly
-   on Solana, using TxLINE's on-chain-anchored World Cup data."
-2. **RPC Health (20s):** show the panel (endpoints, slot freshness, latency). Optionally
-   point a backup at a dead URL via `.dev.vars` to show failover keeps health green —
-   the solana-resilience-kit story (naive 0% → pool 100%).
-3. **Edge + settlement (40s):** click **Run demo replay** → the agent forms its edge on
-   fixture 17588395 and settles on the **real on-chain verdict**; the settlement card
-   shows TRUE + the **Solana Explorer link** + the `daily_scores_roots` PDA + P&L. Stress:
-   no trusted reporter — the proof verifies against the on-chain Merkle root.
-4. **Reproducibility (15s):** re-run — identical edge + verdict (deterministic replay).
-5. **Close (10s):** recap trustlessness + the resilience-kit before/after metrics.
+Local alternative (no `wrangler login`):
+
+```bash
+pnpm --filter @clearline/api exec wrangler d1 migrations apply clearline --local
+pnpm --filter @clearline/api exec wrangler dev --test-scheduled   # http://localhost:8787
+pnpm --filter @clearline/dashboard dev                            # http://localhost:5173
+# kick the cron to start the loop:
+curl "http://localhost:8787/__scheduled?cron=*+*+*+*+*"
+```
+
+1. **Hook (15s):** "ClearLine — an autonomous agent that settles sports edges trustlessly on
+   Solana, using TxLINE's on-chain-anchored World Cup data."
+2. **Autonomous loop (25s):** the agent runs itself — a Durable Object alarm + Cron Trigger
+   drive ingest→decide→open→settle with no manual trigger. Show `/api/agent/loop/status`
+   advancing and the position appearing on the dashboard.
+3. **Trustless settlement (40s):** the deployed loop settles on the **live `validate_stat`
+   verdict** (`verdictSource: "onchain-live"`) — verified against the `daily_scores_roots`
+   Merkle root (read-only `.view()`, no trusted reporter). The settlement card shows TRUE +
+   the **Solana Explorer link** + the root PDA + P&L. (`POST /api/demo-replay` shows the same
+   deterministically.)
+4. **RPC Health (20s):** the panel shows the **Helius primary healthy/fresh** (real slot +
+   latency) with the public devnet backup as failover — the solana-resilience-kit story
+   (naive 0% → pool 100%).
+5. **Reproducibility (15s):** re-run the replay (or `ONCHAIN_LIVE=1 vitest`) — identical edge
+   - verdict.
+6. **Close (10s):** recap trustlessness + the resilience-kit before/after metrics.
 
 ## Remaining (owner)
 
-Record the video (script above). Optional: deploy API (Workers+D1) + dashboard (Pages) — needs
-`wrangler login`.
+- ✅ Deployed: API (Workers + D1 + the `AgentLoop` DO + Cron) and dashboard (Pages) are live;
+  the deployed loop settles `onchain-live` against the live root.
+- ◻ **Record the video** (script above) — the only remaining item.
