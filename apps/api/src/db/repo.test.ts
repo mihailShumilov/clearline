@@ -68,6 +68,8 @@ describe("InMemoryRepository", () => {
       holds: true,
       source: "onchain",
       explorerUrl: "https://explorer.solana.com/tx/SIG?cluster=devnet",
+      path: "onchain-recorded",
+      verifiedOnChain: true,
       createdAtMs: 99,
     });
 
@@ -75,6 +77,35 @@ describe("InMemoryRepository", () => {
     expect(status.state).toBe("idle");
     expect(status.lastReplay?.fixtureId).toBe(17588395);
     expect(status.lastReplay?.pnlLamports).toBe("800000");
+    // verdictSource is the stored path (honest live-vs-recorded provenance).
     expect(status.lastReplay?.verdictSource).toBe("onchain-recorded");
+  });
+
+  it("surfaces the settlement path + verifiedOnChain (live vs recorded provenance)", async () => {
+    const repo = new InMemoryRepository();
+    await repo.saveSettlement({
+      id: "settle:1:0",
+      positionId: "fixture:1",
+      holds: true,
+      source: "onchain",
+      path: "onchain-live",
+      verifiedOnChain: true,
+      createdAtMs: 1,
+    });
+    const [row] = await repo.listSettlements();
+    expect(row?.path).toBe("onchain-live");
+    expect(row?.verifiedOnChain).toBe(true);
+
+    // A plain local settlement carries no path/flag (null), not a fabricated label.
+    await repo.saveSettlement({
+      id: "s2",
+      positionId: "p2",
+      holds: false,
+      source: "local",
+      createdAtMs: 2,
+    });
+    const local = (await repo.listSettlements()).find((s) => s.id === "s2");
+    expect(local?.path).toBeNull();
+    expect(local?.verifiedOnChain).toBeNull();
   });
 });

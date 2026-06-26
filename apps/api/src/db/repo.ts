@@ -40,6 +40,10 @@ export interface SettlementDTO {
   readonly explorerUrl: string | null;
   readonly rootPda: string | null;
   readonly programId: string | null;
+  /** Trustless provenance: "onchain-live" | "onchain-recorded" | null (local). */
+  readonly path: string | null;
+  /** Whether the verdict was verified against the on-chain root (null when unknown). */
+  readonly verifiedOnChain: boolean | null;
   readonly createdAtMs: number;
 }
 
@@ -73,6 +77,10 @@ export interface SaveSettlementInput {
   readonly explorerUrl?: string | undefined;
   readonly rootPda?: string | undefined;
   readonly programId?: string | undefined;
+  /** Trustless provenance: "onchain-live" | "onchain-recorded" (omit for local). */
+  readonly path?: string | undefined;
+  /** Whether the verdict was verified against the on-chain root. */
+  readonly verifiedOnChain?: boolean | undefined;
   readonly createdAtMs: number;
 }
 
@@ -185,6 +193,8 @@ export class D1Repository implements Repository {
       explorerUrl: input.explorerUrl ?? null,
       rootPda: input.rootPda ?? null,
       programId: input.programId ?? null,
+      path: input.path ?? null,
+      verifiedOnChain: input.verifiedOnChain === undefined ? null : input.verifiedOnChain ? 1 : 0,
       createdAtMs: input.createdAtMs,
     };
     await this.#db
@@ -200,6 +210,8 @@ export class D1Repository implements Repository {
           explorerUrl: row.explorerUrl,
           rootPda: row.rootPda,
           programId: row.programId,
+          path: row.path,
+          verifiedOnChain: row.verifiedOnChain,
           createdAtMs: row.createdAtMs,
         },
       });
@@ -233,6 +245,8 @@ export class D1Repository implements Repository {
         explorerUrl: r.explorerUrl,
         rootPda: r.rootPda,
         programId: r.programId,
+        path: r.path,
+        verifiedOnChain: r.verifiedOnChain === null ? null : r.verifiedOnChain !== 0,
         createdAtMs: r.createdAtMs,
       }))
       .sort((a, b) => b.createdAtMs - a.createdAtMs);
@@ -277,7 +291,9 @@ export class D1Repository implements Repository {
         positions: positionRows.length,
         settlements: settlementRows.length,
         pnlLamports,
-        verdictSource: latest.source === "onchain" ? "onchain-recorded" : latest.source,
+        // Honest provenance: the stored path ("onchain-live"/"onchain-recorded") when
+        // known, else the generic source — never mislabel a live verdict as recorded.
+        verdictSource: latest.path ?? latest.source,
         explorerUrl: latest.explorerUrl,
         at: latest.createdAtMs,
       },
@@ -296,6 +312,8 @@ interface MemSettlement {
   readonly explorerUrl: string | null;
   readonly rootPda: string | null;
   readonly programId: string | null;
+  readonly path: string | null;
+  readonly verifiedOnChain: boolean | null;
   readonly createdAtMs: number;
 }
 
@@ -324,6 +342,8 @@ export class InMemoryRepository implements Repository {
       explorerUrl: input.explorerUrl ?? null,
       rootPda: input.rootPda ?? null,
       programId: input.programId ?? null,
+      path: input.path ?? null,
+      verifiedOnChain: input.verifiedOnChain ?? null,
       createdAtMs: input.createdAtMs,
     });
   }
@@ -373,7 +393,7 @@ export class InMemoryRepository implements Repository {
         positions: this.#positions.size,
         settlements: settlementList.length,
         pnlLamports: pos?.pnlLamports ?? "0",
-        verdictSource: latest.source === "onchain" ? "onchain-recorded" : latest.source,
+        verdictSource: latest.path ?? latest.source,
         explorerUrl: latest.explorerUrl,
         at: latest.createdAtMs,
       },

@@ -92,10 +92,12 @@ export {
   runDemoReplay,
   runRealDemoReplay,
   settleRealFixtureOnChain,
+  settleRealFixtureBestEffort,
   realTruePredicate,
   loadDemoFixture,
   loadRealDemoFixture,
   DEMO_SEED,
   DEMO_FIXTURE_ID,
   REAL_FIXTURE_ID,
+  type SettlementPath,
 } from "./demo";
