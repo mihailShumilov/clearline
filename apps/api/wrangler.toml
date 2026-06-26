@@ -11,6 +11,21 @@ database_name = "clearline"
 database_id = "d6db3547-2127-4003-b041-bb8ed9f72a05"
 migrations_dir = "migrations"
 
+# Autonomous agent loop (§7 Phase 5, ADR-0002): a Durable Object alarm drives
+# ingest→decide→open→settle; the Cron Trigger below keeps it alive.
+[[durable_objects.bindings]]
+name = "AGENT_LOOP"
+class_name = "AgentLoop"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["AgentLoop"]
+
+# Poll cadence: the World-Cup free tier has a ~60s delay and no rate limits, so a
+# 1-minute cron is sufficient (ADR-0002). Each tick kicks the loop DO.
+[triggers]
+crons = ["* * * * *"]
+
 # Non-secret RPC config. SOLANA_RPC_PRIMARY (the keyed Helius devnet URL) is a
 # SECRET — set it with `wrangler secret put SOLANA_RPC_PRIMARY` (never committed).
 # The public devnet endpoint is the failover backup (safe to commit).

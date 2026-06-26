@@ -21,6 +21,7 @@ import {
   OnChainSettlementProvider,
   RecordedProofSource,
   RecordedSettlementProvider,
+  type SettleArgs,
   type SettlementOutcome,
 } from "./settlement";
 import { InMemoryPositionStore } from "./store";
@@ -115,6 +116,67 @@ export async function settleRealFixtureOnChain(
     verifiedOnChain: outcome.verifiedOnChain,
   });
   return outcome;
+}
+
+/** Which trustless path produced a {@link settleRealFixtureBestEffort} verdict. */
+export type SettlementPath = "onchain-live" | "onchain-recorded";
+
+/**
+ * Settle the real fixture preferring the LIVE on-chain verdict, falling back to the
+ * recorded-and-reconciled on-chain verdict when the RPC is unreachable.
+ *
+ * The autonomous loop runs under `wrangler dev`/miniflare, whose egress IP the public
+ * devnet RPC may block (HTTP 403); a deployed Worker (or Node) with a keyed RPC reaches it.
+ * So: probe `getSlot` once — on success settle LIVE via {@link OnChainSettlementProvider}
+ * (a real `validate_stat` simulate; an integrity `verdict-mismatch` ALWAYS propagates and is
+ * never masked); on an RPC failure, settle via {@link RecordedSettlementProvider}, which
+ * reconciles against the recorded REAL on-chain verdict and surfaces the same root PDA /
+ * program id / subscribe tx. Both paths yield a verifiable settlement; the returned `path`
+ * makes the provenance explicit.
+ */
+export async function settleRealFixtureBestEffort(
+  pool: ChainPool,
+  predicate?: Predicate,
+  logger: Logger = noopLogger,
+): Promise<{ readonly outcome: SettlementOutcome; readonly path: SettlementPath }> {
+  const fixture = loadRealDemoFixture();
+  const pred = predicate ?? realTruePredicate(fixture);
+
+  let reachable = false;
+  try {
+    await pool.rpc().getSlot().send();
+    reachable = true;
+  } catch (err) {
+    logger.warn("settle.rpc-unreachable", {
+      fixtureId: fixture.fixtureId,
+      name: err instanceof Error ? err.name : "unknown",
+    });
+  }
+
+  if (reachable) {
+    const outcome = await settleRealFixtureOnChain(pool, pred, logger);
+    return { outcome, path: "onchain-live" };
+  }
+
+  // Fallback: recorded-and-reconciled on-chain verdict (real fixture, real evidence).
+  const args: SettleArgs = {
+    fixtureId: fixture.fixtureId,
+    predicate: pred,
+    statsAtSettle: [
+      {
+        key: fixture.chosen.statKey,
+        value: fixture.chosen.statValue,
+        period: fixture.statValidation.statToProve.period,
+      },
+    ],
+  };
+  const outcome = await new RecordedSettlementProvider(fixture).settle(args);
+  logger.info("settle.onchain.recorded", {
+    fixtureId: fixture.fixtureId,
+    holds: outcome.holds,
+    verifiedOnChain: outcome.verifiedOnChain,
+  });
+  return { outcome, path: "onchain-recorded" };
 }
 
 /**

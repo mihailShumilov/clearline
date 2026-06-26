@@ -17,8 +17,11 @@ import type { ReplayResult } from "@clearline/agent";
 import { createChainPool, loadChainConfig, toHealthSnapshot } from "@clearline/chain";
 import type { HealthSnapshotDTO } from "@clearline/chain";
 
+import { AgentLoop, loopStub } from "./agentLoop";
 import { D1Repository } from "./db/repo";
 import { createApp } from "./routes";
+
+export { AgentLoop };
 
 /**
  * The Worker environment bindings. `DB` is the D1 database; the optional
@@ -27,6 +30,8 @@ import { createApp } from "./routes";
  */
 export interface Env {
   readonly DB: D1Database;
+  /** The autonomous-loop Durable Object namespace (§7 Phase 5, ADR-0002). */
+  readonly AGENT_LOOP: DurableObjectNamespace;
   readonly SOLANA_RPC_PRIMARY?: string;
   readonly SOLANA_RPC_BACKUP_1?: string;
   readonly SOLANA_RPC_BACKUP_2?: string;
@@ -79,11 +84,27 @@ function runReplay(fixtureId?: number): Promise<ReplayResult> {
 
 export default {
   fetch(request: Request, env: Env): Response | Promise<Response> {
+    // The autonomous-loop control surface is served by the Durable Object directly,
+    // so the injected Hono app (routes.ts) stays DO-free and unit-testable with fakes.
+    const url = new URL(request.url);
+    if (url.pathname.startsWith("/api/agent/loop")) {
+      return loopStub(env.AGENT_LOOP).fetch(request);
+    }
     const app = createApp({
       repo: new D1Repository(env.DB),
       health: makeHealth(env),
       runReplay,
     });
     return app.fetch(request);
+  },
+
+  /**
+   * Cron Trigger (§6, ADR-0002): keep the autonomous loop alive. Each tick kicks the
+   * loop DO — starting a fresh run when idle/done and re-arming a stalled alarm — so the
+   * agent runs ingest→decide→open→settle on a schedule with no manual HTTP trigger.
+   */
+  async scheduled(_event: ScheduledController, env: Env): Promise<void> {
+    const stub = loopStub(env.AGENT_LOOP);
+    await stub.fetch("https://agent-loop/api/agent/loop/cron");
   },
 };

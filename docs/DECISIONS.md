@@ -172,6 +172,50 @@ hand-rolled encoder is the simpler, more auditable choice. Supersedes the ADR-00
 "Codama-generated clients" **for this one instruction** only.
 **Status:** Accepted.
 
+## ADR-0009 — Autonomous loop: Durable Object alarm + Cron Trigger (Phase 5)
+
+**Context:** §6/ADR-0002 call for a recurring ingest→decide→open→settle loop that is NOT a
+held SSE socket. Phase 5's acceptance is "the loop self-runs on the replay under `wrangler
+dev`, opens and settles ≥1 position with a verifiable settlement + structured logs."
+
+**Decision (the implemented minimum):**
+
+- A **Durable Object** (`AgentLoop`, `apps/api/src/agentLoop.ts`) whose **alarm** advances a
+  phase machine — `ingest → open → settle → done` — over the bundled real fixture, persisting
+  positions/settlements/events to **D1** through the same `Repository` the API reads, with
+  structured JSON logs and idempotent upserts (one position per fixture). The phase logic
+  lives in the pure-ish `stepLoop` so it is unit-tested without miniflare; the DO is a thin
+  storage/alarm wrapper.
+- A **Cron Trigger** (`crons = ["* * * * *"]`, `scheduled()` in `index.ts`) keeps the loop
+  alive: it kicks the loop DO each minute — starting a fresh run when idle/done and re-arming
+  a stalled alarm — so the agent runs with **no manual HTTP trigger**.
+- Loop control (`/api/agent/loop/{start,cron,status}`) is served by the DO directly, so the
+  injected Hono app (`routes.ts`) stays DO-free and unit-testable with fakes.
+
+**Best-effort settlement (live preferred, recorded fallback).** The loop settles via
+`settleRealFixtureBestEffort`: it probes `getSlot`; on success it settles **LIVE** through the
+Task-1 `OnChainSettlementProvider` (a real `validate_stat` simulate); on an RPC failure it
+falls back to `RecordedSettlementProvider` (the recorded-and-reconciled on-chain verdict, which
+still carries the real root PDA / program id / subscribe tx). An integrity `verdict-mismatch`
+from the live path is NEVER masked — it always propagates. The chosen `path`
+(`onchain-live` | `onchain-recorded`) is logged and stored on the settle event.
+
+- **Why the fallback exists:** under `wrangler dev`/miniflare the workerd egress IP is **403
+  "blocked"** by the public devnet RPC (`api.devnet.solana.com`); the host reaches it fine, and
+  a deployed Worker (or Node) with the keyed `SOLANA_RPC_PRIMARY` (Helius) secret reaches it.
+  Verified live under `wrangler dev`: the cron started the loop, which opened + settled a `won`
+  position (P&L 800,000 lamports) via `onchain-recorded` with full structured logs — meeting
+  the Phase-5 acceptance without faking a verdict. With a reachable RPC the same loop settles
+  via `onchain-live`.
+
+**Deferred (the remainder, intentionally not built):** polling live TxLINE score snapshots for
+**in-progress** fixtures and running the `OverGoals` strategy over the live feed. Live World-Cup
+matches are over before judging (ADR-0005), so the deterministic replay is the demo vehicle; the
+loop drives the bundled real fixture rather than a live in-play feed. The `TxlineClient` SSE/
+snapshot reads and the `LiveProofSource` (live `getStatValidation` fetch) are implemented and
+ready to wire when a live in-play fixture is available.
+**Status:** Accepted.
+
 ## OPEN (to resolve in-phase)
 
 - _(resolved)_ Stat-validation auth header convention → Bearer + `X-Api-Token` (Phase 1, API.md).

@@ -138,6 +138,9 @@ async function persistReplay(repo: Repository, result: ReplayResult): Promise<vo
       explorerUrl: outcome.explorerUrl,
       rootPda: outcome.rootPda,
       programId: outcome.programId,
+      // The deterministic replay settles on the recorded-and-reconciled on-chain verdict.
+      path: result.onchain?.verdictSource,
+      verifiedOnChain: outcome.verifiedOnChain,
       createdAtMs: now,
     });
   }
