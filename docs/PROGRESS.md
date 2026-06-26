@@ -17,6 +17,13 @@
 - **Phase 3** Core quant logic — predicate (mirrors `validate_stat`), integer money, settle; 100% covered.
 - **Phase 4** On-chain trustless settlement — REAL devnet verdict: fixture 17588395, `value>0`→TRUE / `value>1`→FALSE vs root PDA `CdUmkUdc…Rs3jHQ`. Subscribe tx `rGE1t1g…YA8M`. Free tier = SL1 @ 0 TxL, `weeks%4==0` → `subscribe(1,4)`. ADR-0007.
 - **Phase 5** Agent loop + deterministic replay engine — pure/reproducible; settlement provider abstraction.
+- **Phase 5 (autonomous)** Durable Object alarm + Cron Trigger loop (ADR-0009) — self-runs
+  ingest→open→settle on the bundled real fixture under `wrangler dev` (no manual trigger),
+  idempotent D1 persistence + structured logs. Verified: cron started the loop → opened +
+  settled a `won` position (P&L 800,000) with the real root PDA/Explorer link. Settlement is
+  best-effort (LIVE `validate_stat` when the RPC is reachable, else the recorded-and-reconciled
+  on-chain verdict — `path` logged). Run it locally:
+  `wrangler dev --test-scheduled` then `curl "localhost:8787/__scheduled?cron=*+*+*+*+*"`.
 - **Phase 8 (core)** `/demo-replay` settles on the REAL recorded on-chain verdict deterministically (`runRealDemoReplay`): holds=true, Explorer link + root PDA + integer P&L 800,000 lamports; integrity guard (no fabrication).
 
 ## On-chain artifacts

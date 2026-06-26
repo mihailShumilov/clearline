@@ -33,6 +33,11 @@ export const positions = sqliteTable("positions", {
  * (0/1) since SQLite has no native boolean. `source` is "local" | "onchain". The
  * on-chain evidence columns (`signature`, `explorerUrl`, `rootPda`, `programId`)
  * are nullable — present only for the real recorded on-chain path.
+ *
+ * `path` distinguishes the trustless settlement provenance honestly: "onchain-live"
+ * (a real `validate_stat` simulate) vs "onchain-recorded" (the recorded-and-reconciled
+ * verdict), nullable for plain local settlements. `verifiedOnChain` (0/1, nullable)
+ * mirrors the outcome flag so the status surface never mislabels a live verdict.
  */
 export const settlements = sqliteTable("settlements", {
   id: text("id").primaryKey(),
@@ -43,6 +48,8 @@ export const settlements = sqliteTable("settlements", {
   explorerUrl: text("explorer_url"),
   rootPda: text("root_pda"),
   programId: text("program_id"),
+  path: text("path"),
+  verifiedOnChain: integer("verified_on_chain"),
   createdAtMs: integer("created_at_ms").notNull(),
 });
 
