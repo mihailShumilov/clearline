@@ -10,3 +10,10 @@ binding = "DB"
 database_name = "clearline"
 database_id = "d6db3547-2127-4003-b041-bb8ed9f72a05"
 migrations_dir = "migrations"
+
+# Non-secret RPC config. SOLANA_RPC_PRIMARY (the keyed Helius devnet URL) is a
+# SECRET — set it with `wrangler secret put SOLANA_RPC_PRIMARY` (never committed).
+# The public devnet endpoint is the failover backup (safe to commit).
+[vars]
+SOLANA_CLUSTER = "devnet"
+SOLANA_RPC_BACKUP_1 = "https://api.devnet.solana.com"

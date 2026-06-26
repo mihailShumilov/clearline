@@ -37,16 +37,27 @@ pnpm --filter @clearline/dashboard exec wrangler pages deploy dist --project-nam
 
 CORS is open (`*`), so the Pages SPA can call the Worker cross-origin.
 
-## Known caveat — live RPC Health from Workers
+## RPC config — Helius primary + public devnet backup
 
-`/api/health` probes a devnet RPC through solana-resilience-kit. Public devnet endpoints
-(`api.devnet.solana.com`) frequently rate-limit Cloudflare egress, so the **deployed**
-health panel may show the endpoint as degraded / `slot: null`. This does **not** affect the
-headline (`POST /api/demo-replay` serves the real recorded on-chain verdict from D1 and works
-live). For a pristine RPC-Health panel in the demo video, either:
+`/api/health` probes the RPC pool through solana-resilience-kit. Public devnet
+(`api.devnet.solana.com`) rate-limits Cloudflare egress, so it's the **backup**; the
+**primary** is a keyed **Helius devnet** URL (Worker-friendly, no egress limit).
 
-- run the stack **locally** (`wrangler dev` + `vite dev`) from a normal IP (best panel), or
-- set a keyed devnet RPC: `wrangler secret put SOLANA_RPC_PRIMARY` (e.g. a Helius/QuickNode devnet URL).
+- `SOLANA_RPC_BACKUP_1 = https://api.devnet.solana.com` — committed in `wrangler.toml [vars]`.
+- `SOLANA_RPC_PRIMARY` — the Helius URL is a **SECRET**; set it (value never committed/logged):
+  ```bash
+  pnpm --filter @clearline/api exec wrangler secret put SOLANA_RPC_PRIMARY
+  # paste:  https://devnet.helius-rpc.com/?api-key=YOUR_HELIUS_KEY
+  ```
+  It applies to the live Worker immediately (no redeploy needed). Then the health panel
+  shows Helius healthy/fresh (real slot + latency) with the public backup as failover.
+
+For **local** dev, put both in `apps/api/.dev.vars` (gitignored):
+`SOLANA_RPC_PRIMARY=https://devnet.helius-rpc.com/?api-key=…` and
+`SOLANA_RPC_BACKUP_1=https://api.devnet.solana.com`.
+
+> The demo headline (`POST /api/demo-replay` → real recorded on-chain verdict) works
+> regardless of RPC health — health only powers the live RPC panel.
 
 ## Redeploy
 
