@@ -33,15 +33,15 @@ naive client lands **0% / 47.5% / 71%** while the resilient pool lands **100%**.
 
 ## Monorepo
 
-| Path                 | What                                                                                               |
-| -------------------- | -------------------------------------------------------------------------------------------------- |
-| `packages/core`      | Pure, integer-only decision/settlement math (predicate mirrors `validate_stat`); **100% covered**. |
-| `packages/txline`    | Typed TxLINE client (auth, Zod v4 schemas, reads, SSE).                                            |
-| `packages/chain`     | The **only** RPC path: solana-resilience-kit pool + health + OTel.                                 |
-| `packages/agent`     | Ingest → decide → open → settle; deterministic replay; settlement providers.                       |
-| `packages/contracts` | TxLINE IDL + the on-chain settlement spike (devnet `validate_stat`).                               |
-| `apps/api`           | Hono API on Cloudflare Workers + D1 (positions/settlements/RPC-health/SSE/demo-replay).            |
-| `apps/dashboard`     | Proof-of-Edge dashboard (Vite + React) incl. the RPC Health panel.                                 |
+| Path                 | What                                                                                                                                         |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/core`      | Pure, integer-only decision/settlement math (predicate mirrors `validate_stat`); **100% covered**.                                           |
+| `packages/txline`    | Typed TxLINE client (auth, Zod v4 schemas, reads, SSE).                                                                                      |
+| `packages/chain`     | The **only** RPC path: solana-resilience-kit pool + health + OTel.                                                                           |
+| `packages/agent`     | Ingest → decide → open → settle; deterministic replay; settlement providers.                                                                 |
+| `packages/contracts` | TxLINE IDL + the on-chain settlement spike (devnet `validate_stat`).                                                                         |
+| `apps/api`           | Hono API on Workers + D1 (positions/settlements/RPC-health/SSE/demo-replay) + the **autonomous loop** (Durable Object alarm + Cron Trigger). |
+| `apps/dashboard`     | Proof-of-Edge dashboard (Vite + React) incl. the RPC Health panel.                                                                           |
 
 ## Quickstart
 
@@ -67,6 +67,28 @@ agent forms its edge on fixture 17588395 and settles it on the **real recorded o
 verdict**, surfacing the **Solana Explorer link** and P&L. See [`docs/SUBMISSION.md`](./docs/SUBMISSION.md)
 for the full video script. Headless proof: `POST http://localhost:8787/api/demo-replay`.
 
+### Run the autonomous loop (self-running, no manual trigger)
+
+```bash
+pnpm --filter @clearline/api exec wrangler dev --test-scheduled   # → http://localhost:8787
+curl "http://localhost:8787/__scheduled?cron=*+*+*+*+*"           # kick the Cron Trigger
+curl http://localhost:8787/api/agent/loop/status                  # watch ingest→open→settle→done
+```
+
+The Durable Object alarm drives `ingest → open → settle` and persists to D1; the loop opens
+and settles a position with structured logs. Settlement uses the **live** `validate_stat`
+verdict when the RPC is reachable, else the recorded-and-reconciled on-chain verdict (the
+`path` field surfaces which — ADR-0009).
+
+### Prove the live on-chain verdict from the agent's own path
+
+```bash
+ONCHAIN_LIVE=1 pnpm exec vitest run packages/agent/src/onchainLive.test.ts
+```
+
+Settles fixture 17588395 against the **live** `daily_scores_roots` root via the production
+`OnChainSettlementProvider`: `value>0`→TRUE, `value>1`→FALSE (read-only `.view()`, no signature).
+
 ### Secrets (never committed)
 
 Copy `.env.example` → `.dev.vars` (for `wrangler dev`) / `.env` (Node scripts). The
@@ -74,6 +96,8 @@ dedicated devnet agent wallet and `TXLINE_*` tokens live there (gitignored).
 
 ## Status
 
-Phases 0–8 complete (agent, resilience, core, **live on-chain trustless settlement**,
-API, dashboard, deterministic replay); repo is public. Remaining (owner): record the demo
-video (§13). 203 tests, `packages/core` 100% covered, `pnpm check` green.
+Phases 0–8 complete (core, resilience, **live on-chain trustless settlement** via the
+agent's own provider, **autonomous Durable-Object + Cron loop**, API, dashboard,
+deterministic replay); repo is public. Remaining (owner): record the demo video (§13) and
+deploy (needs `wrangler login` + a keyed `SOLANA_RPC_PRIMARY`). **231 + 24** tests,
+`packages/core` 100% covered, `pnpm check` green.
