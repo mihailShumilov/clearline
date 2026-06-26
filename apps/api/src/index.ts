@@ -56,6 +56,13 @@ function makeHealth(env: Env): () => Promise<HealthSnapshotDTO> {
         SOLANA_CLUSTER: env.SOLANA_CLUSTER,
       });
       const pool = createChainPool(config);
+      // Probe once so the HealthMonitor records live slot/latency before we
+      // snapshot it (freshness-aware routing probes endpoints on a request).
+      try {
+        await pool.rpc().getSlot().send();
+      } catch {
+        // A probe failure still yields a meaningful (unhealthy) snapshot below.
+      }
       return toHealthSnapshot(pool.health());
     } catch (err) {
       // Do NOT echo the env or any secret; log a terse marker only.

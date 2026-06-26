@@ -8,7 +8,5 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "clearline"
-# Placeholder — replace with the real id from `wrangler d1 create clearline`
-# (deploy needs `wrangler login`; local dev does not).
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "d6db3547-2127-4003-b041-bb8ed9f72a05"
 migrations_dir = "migrations"

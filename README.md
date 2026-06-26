@@ -18,6 +18,8 @@ production polygon for it.
 > Network: **Solana devnet only**. Full spec in [`CLAUDE.md`](./CLAUDE.md); decisions in
 > [`docs/DECISIONS.md`](./docs/DECISIONS.md); progress in [`docs/PROGRESS.md`](./docs/PROGRESS.md).
 
+**Live:** dashboard → https://clearline-dashboard.pages.dev/ · API → https://clearline-api.mschumilow.workers.dev (devnet). Deploy steps: [`docs/DEPLOY.md`](./docs/DEPLOY.md).
+
 ## Proven on devnet 🎯
 
 `validate_stat` (read-only `.view()`) verified a real predicate against the on-chain root:

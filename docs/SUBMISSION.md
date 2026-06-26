@@ -26,10 +26,12 @@ _The TxODDS Hackathon Challenge 2026 — World Cup. Network: devnet._
 ## Links
 
 - Repo: https://github.com/mihailShumilov/clearline (public)
+- **Live dashboard:** https://clearline-dashboard.pages.dev/
+- **Live API:** https://clearline-api.mschumilow.workers.dev
 - Devnet program: `6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J`
 - Subscribe tx: https://explorer.solana.com/tx/rGE1t1gAtNJAFCxLsLkKEek7rusKfrsrnqTQcMbCukNZhfdg9Tng3wfuBb5SjrUV3DXBvRqSa5efyPL4ukFYA8M?cluster=devnet
 - daily_scores_roots PDA: `CdUmkUdc4XBKeeq7Kq6JxQvnVMNuDA21mp98x4Rs3jHQ`
-- Dashboard (Pages) / demo video: _tbd (owner)_
+- Demo video: _tbd (owner)_
 
 ## Demo script (concrete — for the recording)
 
