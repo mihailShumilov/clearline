@@ -6,8 +6,8 @@
 
 - GitHub: https://github.com/mihailShumilov/clearline (**public**).
 - Devnet agent wallet (dedicated, gitignored): `HCbeaJ54rRSEwey2QEd49tgFyrfFYAfpK3kzZ86NKd8P` (funded 5 SOL).
-- `pnpm check` green on `main`: **203 passed / 2 skipped**, `packages/core` **100%** coverage.
-- 5 PRs merged (all reviewer-gated). Upstream kit issues filed: #8, #9.
+- `pnpm check` green: **231 passed / 3 skipped** (packages); `apps/api` **24 passed** (own vitest config); `packages/core` **100%** coverage (branches 100%).
+- Reviewer-gated PRs throughout. Upstream **solana-resilience-kit** issues filed: #8, #9.
 
 ## Done
 
@@ -24,6 +24,12 @@
   best-effort (LIVE `validate_stat` when the RPC is reachable, else the recorded-and-reconciled
   on-chain verdict — `path` logged). Run it locally:
   `wrangler dev --test-scheduled` then `curl "localhost:8787/__scheduled?cron=*+*+*+*+*"`.
+- **Phase 6** API (Hono on Workers + D1) — REST + SSE: positions/edges/settlements (with
+  sigs + on-chain provenance), RPC health, agent status; `POST /api/demo-replay` control;
+  Zod-validated I/O; runs under `wrangler dev` against local D1.
+- **Phase 7** Proof-of-Edge dashboard (Vite + React) — edges/positions, settlement cards
+  (Explorer link + verdict + root PDA), running P&L, live SSE event stream, and the headline
+  **RPC Health** panel from resilience-kit telemetry. Live build on Cloudflare Pages.
 - **Phase 8 (core)** `/demo-replay` settles on the REAL recorded on-chain verdict deterministically (`runRealDemoReplay`): holds=true, Explorer link + root PDA + integer P&L 800,000 lamports; integrity guard (no fabrication).
 
 ## On-chain artifacts
@@ -48,7 +54,12 @@
 
 ## Next (remaining for full §13)
 
-- **Phase 6** — Hono API on Cloudflare Workers + D1 (positions/edges/settlements/RPC-health/agent-status + replay control); local `wrangler dev`.
-- **Phase 7** — Proof-of-Edge dashboard (Vite + React): edges/positions, settlement cards (Explorer + verdict), P&L, live event stream, **RPC Health** panel.
-- **Phase 9** — repo public ✅; record the demo video (§13 scenario) — owner action.
-- Small follow-ups: a CLI entry to run `/demo-replay`; `verifiedOnChain` should be false for predicates with no recorded on-chain cross-check; live-path normalization of the real fixture's `number[]` proof encoding vs the txline `z.string()` schema.
+- **Phase 9** — repo public ✅; complete docs ✅; **record the demo video** (§13 scenario) — owner action.
+- **Deploy** (owner) — `wrangler deploy` (Workers+D1) + Pages + `wrangler secret put SOLANA_RPC_PRIMARY` (keyed Helius) need `wrangler login`. The live loop settles via `onchain-live` once a non-IP-blocked RPC is configured (the public devnet 403-blocks the miniflare/workerd egress IP locally — ADR-0009).
+- **Deferred (ADR-0009)** — live polling of in-progress TxLINE fixtures + strategy over the live feed (World-Cup matches are over before judging; the deterministic replay is the demo vehicle). `LiveProofSource` + the SSE/snapshot reads are implemented and ready to wire.
+
+## Resolved follow-ups
+
+- ✅ `verifiedOnChain` is now `false` for predicates with no recorded on-chain cross-check (Task 1, `RecordedSettlementProvider`).
+- ✅ `number[]`-vs-base64 proof encoding normalized in production: `txline` `MerkleBytesSchema` + `@clearline/chain` `normalizeStatValidation` (Task 1, ADR-0008).
+- ◻ Minor: a CLI entry to run `/demo-replay` (the `POST /api/demo-replay` + the `ONCHAIN_LIVE` test + the autonomous loop cover the same ground).
